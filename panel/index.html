@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>Game Panel</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="header">Game Panel</div>
+<div class="login-container">
+<h2>Log In</h2>
+<input type="text" placeholder="Username" id="username">
+<input type="password" placeholder="Password" id="password">
+<button onclick="login()">Login</button>
+</div>
+
+<script>
+function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            window.location.href = 'dashboard.html';
+        } else {
+            alert('Fehler: ' + data.message);
+        }
+    })
+    .catch(err => alert('Fehler: ' + err.message));
+}
+</script>
+</body>
+</html>

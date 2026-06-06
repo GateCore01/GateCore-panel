@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="panel-sidebar">
+ <div class="sidebar">
+    <h2>GamePanel</h2>
+
+    <ul>
+        <li>Dashboard</li>
+        <li>Server</li>
+        <li>Spieler</li>
+        <li>Logs</li>
+        <li>Backups</li>
+        <li>Plugins</li>
+        <li>Benutzerverwaltung</li>
+        <li>Hosts</li>
+        <li>Einstellungen</li>
+    </ul>
+</div>
+
+<div class="main">
+
+    <div class="topbar">
+        <input type="text" placeholder="Suchen...">
+        <div class="user">Admin</div>
+    </div>
+
+    <div class="cards">
+        <div class="card">
+            <h3>Spieler Online</h3>
+            <span>482</span>
+        </div>
+
+        <div class="card">
+            <h3>Server Status</h3>
+            <span class="green">Online</span>
+        </div>
+
+        <div class="card">
+            <h3>RAM Nutzung</h3>
+            <span>6.2 GB</span>
+        </div>
+
+        <div class="card">
+            <h3>CPU Last</h3>
+            <span>23%</span>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="chart">
+            <h3>Server Auslastung</h3>
+            <canvas id="usageChart"></canvas>
+        </div>
+
+        <div class="logs">
+            <h3>Letzte Aktivitäten</h3>
+
+            <table>
+                <tr>
+                    <th>Zeit</th>
+                    <th>Aktion</th>
+                    <th>Status</th>
+                </tr>
+
+                <tr>
+                    <td>12:31</td>
+                    <td>Server gestartet</td>
+                    <td>OK</td>
+                </tr>
+
+                <tr>
+                    <td>12:34</td>
+                    <td>Backup erstellt</td>
+                    <td>OK</td>
+                </tr>
+
+                <tr>
+                    <td>12:40</td>
+                    <td>Spieler verbunden</td>
+                    <td>OK</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+new Chart(document.getElementById('usageChart'), {
+    type: 'line',
+    data: {
+        labels: ['10','11','12','13','14','15'],
+        datasets: [{
+            label: 'CPU %',
+            data: [20,35,25,50,40,60],
+            borderColor: '#3b82f6',
+            fill: true,
+            backgroundColor: 'rgba(59,130,246,0.2)'
+        }]
+    }
+});
+</script>
+
+</body>
+</html>  
