@@ -27,7 +27,7 @@ function login() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            window.location.href = 'dashboard.html';
+            window.location.href = 'panel.html';
         } else {
             alert('Fehler: ' + data.message);
         }
