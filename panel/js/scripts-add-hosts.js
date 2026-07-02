@@ -1,4 +1,3 @@
-const hostStorageKey = 'gamePanelHosts';
 const settingsStorageKey = 'gamePanelHostSettings';
 
 function showMessage(message, type = 'success') {
@@ -21,28 +20,16 @@ function saveSettings(settings) {
     localStorage.setItem(settingsStorageKey, JSON.stringify(settings));
 }
 
-function getLocalHosts() {
-    try {
-        const saved = localStorage.getItem(hostStorageKey);
-        return saved ? JSON.parse(saved) : [];
-    } catch (err) {
-        return [];
-    }
-}
-
-function saveLocalHosts(hosts) {
-    localStorage.setItem(hostStorageKey, JSON.stringify(hosts));
-}
-
 async function fetchHostList(apiUrl) {
     if (!apiUrl) {
-        return getLocalHosts();
+        return [];
     }
 
     try {
         const response = await fetch(apiUrl, {
             method: 'GET',
-            headers: { 'Accept': 'application/json' }
+            headers: { 'Accept': 'application/json' },
+            credentials: 'include'
         });
 
         if (!response.ok) {
@@ -58,30 +45,43 @@ async function fetchHostList(apiUrl) {
             return data.hosts;
         }
 
-        return getLocalHosts();
+        return [];
     } catch (error) {
-        console.warn('API konnte nicht geladen werden, verwende lokalen Speicher.', error);
-        return getLocalHosts();
+        console.warn('Hosts konnten nicht geladen werden.', error);
+        return [];
     }
 }
 
 async function sendHostToApi(host, apiUrl) {
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(host)
-        });
+    const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(host)
+    });
 
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        return result;
-    } catch (error) {
-        throw error;
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
     }
+
+    return response.json();
+}
+
+async function deleteHostFromApi(address, apiUrl) {
+    const response = await fetch(apiUrl, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    return response.json();
 }
 
 function renderHostRows(hosts) {
@@ -90,19 +90,34 @@ function renderHostRows(hosts) {
 
     body.innerHTML = '';
     if (!hosts || hosts.length === 0) {
-        body.innerHTML = '<tr><td colspan="4">Keine Hosts gefunden.</td></tr>';
+        body.innerHTML = '<tr><td colspan="5">Keine Hosts gefunden.</td></tr>';
         return;
     }
 
     hosts.forEach((host) => {
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${host.name || '-'} </td>
-            <td>${host.address || '-'} </td>
+            <td>${host.name || '-'}</td>
+            <td>${host.address || '-'}</td>
             <td>${host.api || host.apiUrl || '-'}</td>
             <td>${host.status || 'geladen'}</td>
+            <td><button type="button" class="delete-host-button" data-address="${host.address || ''}">Löschen</button></td>
         `;
         body.appendChild(row);
+    });
+
+    body.querySelectorAll('.delete-host-button').forEach((button) => {
+        button.addEventListener('click', async () => {
+            const address = button.getAttribute('data-address');
+            if (!address) return;
+            try {
+                await deleteHostFromApi(address, getSavedSettings().apiUrl || '/api/hosts');
+                showMessage('Host erfolgreich gelöscht.', 'success');
+                await loadHosts();
+            } catch (error) {
+                showMessage(error.message || 'Host konnte nicht gelöscht werden.', 'error');
+            }
+        });
     });
 }
 
@@ -114,7 +129,7 @@ async function loadHosts() {
         apiUrlInput.value = settings.apiUrl || '/api/hosts';
     }
 
-    const hosts = await fetchHostList(settings.apiUrl);
+    const hosts = await fetchHostList(settings.apiUrl || '/api/hosts');
     renderHostRows(hosts);
 }
 
@@ -148,17 +163,15 @@ async function handleSaveHost() {
 
     try {
         await sendHostToApi(newHost, apiUrl);
-        showMessage('Host erfolgreich an die API gesendet und in CSV gespeichert.', 'success');
+        showMessage('Host erfolgreich gespeichert.', 'success');
     } catch (error) {
-        const currentHosts = getLocalHosts();
-        const savedHosts = [...currentHosts, newHost];
-        saveLocalHosts(savedHosts);
-        showMessage('API nicht erreichbar. Host lokal gespeichert.', 'warning');
+        showMessage(error.message || 'Host konnte nicht gespeichert werden.', 'error');
+        return;
     }
 
     nameField.value = '';
     addressField.value = '';
-    loadHosts();
+    await loadHosts();
 }
 
 function buildCsvText(hosts) {
@@ -183,12 +196,7 @@ function downloadCsv(content, filename = 'hosts.csv') {
 async function exportHostsAsCsv() {
     const settings = getSavedSettings();
     const apiUrl = settings.apiUrl || '/api/hosts';
-    let hosts = await fetchHostList(apiUrl);
-
-    if (!hosts || hosts.length === 0) {
-        hosts = getLocalHosts();
-    }
-
+    const hosts = await fetchHostList(apiUrl);
     const csvText = buildCsvText(hosts);
     downloadCsv(csvText, 'hosts.csv');
 }

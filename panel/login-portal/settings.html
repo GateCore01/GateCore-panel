@@ -4,19 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Panel</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/auth.js"></script>
+    <script src="/js/settings.js" defer></script>
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
         <h2>GamePanel</h2>
         <ul>
-            <li onclick="window.location.href='panel.html'">Dashboard</li>
-            <li onclick="window.location.href='server.html'">Server</li>
-            <li onclick="window.location.href='server-shell.html'">Server-Shell</li>
-            <li onclick="window.location.href='host-shell.html'">Host-Shell</li>
-            <li onclick="window.location.href='backup.html'">Backups</li>
-            <li onclick="window.location.href='user.html'">Benutzerverwaltung</li>
-            <li onclick="window.location.href='hosts.html'">Hosts</li>
+            <li><a href="/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
+            <li><a href="/server.html" onclick="event.preventDefault(); guardPanelNavigation('/server.html')">Server</a></li>
+            <li><a href="/server-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/server-shell.html')">Server-Shell</a></li>
+            <li><a href="/host-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/host-shell.html')">Host-Shell</a></li>
+            <li><a href="/backup.html" onclick="event.preventDefault(); guardPanelNavigation('/backup.html')">Backups</a></li>
+            <li><a href="/user.html" onclick="event.preventDefault(); guardPanelNavigation('/user.html')">Benutzerverwaltung</a></li>
+            <li><a href="/hosts.html" onclick="event.preventDefault(); guardPanelNavigation('/hosts.html')">Hosts</a></li>
             <li class="active">Einstellungen</li>
         </ul>
     </div>
@@ -61,16 +63,16 @@
                 <tr>
                     <td>Panel-Name</td>
                     <td>
-                        <input type="text" value="GamePanel">
+                        <input id="panel-name" type="text" value="GamePanel">
                     </td>
                 </tr>
 
                 <tr>
                     <td>Sprache</td>
                     <td>
-                        <select>
+                        <select id="language">
                             <option selected>Deutsch</option>
-                            <option>English</option>
+                            <option>Deutsch</option>
                         </select>
                     </td>
                 </tr>
@@ -78,28 +80,28 @@
                 <tr>
                     <td>E-Mail Benachrichtigungen</td>
                     <td>
-                        <input type="checkbox" checked>
+                        <input id="email-notifications" type="checkbox" checked>
                     </td>
                 </tr>
 
                 <tr>
                     <td>Dark Mode</td>
                     <td>
-                        <input type="checkbox">
+                        <input id="dark-mode" type="checkbox">
                     </td>
                 </tr>
 
                 <tr>
                     <td>Auto-Save Intervall</td>
                     <td>
-                        <input type="number" value="15">
+                        <input id="auto-save-interval" type="number" value="15">
                     </td>
                 </tr>
             </table>
 
             <br>
 
-            <button>Speichern</button>
+            <button id="save-settings-btn" type="button">Speichern</button>
         </div>
 
         <div class="logs">
@@ -112,7 +114,7 @@
                 </tr>
                 <tr>
                     <td>
-                        <input type="password" placeholder="Neues Passwort">
+                        <input id="new-password" type="password" placeholder="Neues Passwort">
                     </td>
                 </tr>
 
@@ -121,14 +123,14 @@
                 </tr>
                 <tr>
                     <td>
-                        <input type="password" placeholder="Passwort wiederholen">
+                        <input id="password-confirm" type="password" placeholder="Passwort wiederholen">
                     </td>
                 </tr>
 
                 <tr>
                     <td>
                         <label>
-                            <input type="checkbox" checked>
+                            <input id="two-factor" type="checkbox" checked>
                             Zwei-Faktor-Authentifizierung
                         </label>
                     </td>
@@ -137,7 +139,7 @@
 
             <br>
 
-            <button>Passwort ändern</button>
+            <button id="change-password-btn" type="button">Passwort ändern</button>
         </div>
 
     </div>

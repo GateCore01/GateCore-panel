@@ -3,38 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <title>Game Panel</title>
-<link rel="stylesheet" href="css/styles.css">
-<body class="login-page">
+<link rel="stylesheet" href="/css/styles.css">
 </head>
+<body class="login-page">
 <div class="header">Game Panel</div>
 
 <div class="login-container">
     <h2>Log In</h2>
     <input type="text" placeholder="Username" id="username">
     <input type="password" placeholder="Password" id="password">
-    <button onclick="login()">Login</button>
+    <button type="button" onclick="login()">Login</button>
 </div>
 </body>
 
-<script>
-function login() {
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    fetch('/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            window.location.href = 'panel.html';
-        } else {
-            alert('Fehler: ' + data.message);
-        }
-    })
-    .catch(err => alert('Fehler: ' + err.message));
-}
-</script>
+<script src="/js/auth.js"></script>
 </html>

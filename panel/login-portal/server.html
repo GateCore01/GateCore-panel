@@ -4,22 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <script src="js/add-server.js" defer></script>
-    <script src="js/scripts-add-hosts.js" defer></script>
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/auth.js"></script>
+    <script src="/js/add-server.js" defer></script>
+    <script src="/js/scripts-add-hosts.js" defer></script>
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
         <h2>GamePanel</h2>
         <ul>
-            <li onclick="window.location.href='panel.html'">Dashboard</li>
+            <li><a href="/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
             <li class="active">Server</li>
-            <li onclick="window.location.href='server-shell.html'">Server-Shell</li>
-            <li onclick="window.location.href='host-shell.html'">Host-Shell</li>
-            <li onclick="window.location.href='backup.html'">Backups</li>
-            <li onclick="window.location.href='user.html'">Benutzerverwaltung</li>
-            <li onclick="window.location.href='hosts.html'">Hosts</li>
-            <li onclick="window.location.href='settings.html'">Einstellungen</li>
+            <li><a href="/server-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/server-shell.html')">Server-Shell</a></li>
+            <li><a href="/host-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/host-shell.html')">Host-Shell</a></li>
+            <li><a href="/backup.html" onclick="event.preventDefault(); guardPanelNavigation('/backup.html')">Backups</a></li>
+            <li><a href="/user.html" onclick="event.preventDefault(); guardPanelNavigation('/user.html')">Benutzerverwaltung</a></li>
+            <li><a href="/hosts.html" onclick="event.preventDefault(); guardPanelNavigation('/hosts.html')">Hosts</a></li>
+            <li><a href="/settings.html" onclick="event.preventDefault(); guardPanelNavigation('/settings.html')">Einstellungen</a></li>
         </ul>
     </div>
 
@@ -78,5 +79,10 @@
             </div>
         </div>
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    requireAuth();
+});
+</script>
 </body>
 </html>

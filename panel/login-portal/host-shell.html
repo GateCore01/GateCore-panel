@@ -4,20 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Host-Shell</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="/css/styles.css">
+    <script src="/js/auth.js"></script>
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
         <h2>GamePanel</h2>
         <ul>
-            <li onclick="window.location.href='panel.html'">Dashboard</li>
-            <li onclick="window.location.href='server.html'">Server</li>
-            <li onclick="window.location.href='server-shell.html'">Server-Shell</li>
+            <li><a href="/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
+            <li><a href="/server.html" onclick="event.preventDefault(); guardPanelNavigation('/server.html')">Server</a></li>
+            <li><a href="/server-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/server-shell.html')">Server-Shell</a></li>
             <li class="active">Host-Shell</li>
-            <li onclick="window.location.href='backup.html'">Backups</li>
-            <li onclick="window.location.href='user.html'">Benutzerverwaltung</li>
-            <li onclick="window.location.href='hosts.html'">Hosts</li>
-            <li onclick="window.location.href='settings.html'">Einstellungen</li>
+            <li><a href="/backup.html" onclick="event.preventDefault(); guardPanelNavigation('/backup.html')">Backups</a></li>
+            <li><a href="/user.html" onclick="event.preventDefault(); guardPanelNavigation('/user.html')">Benutzerverwaltung</a></li>
+            <li><a href="/hosts.html" onclick="event.preventDefault(); guardPanelNavigation('/hosts.html')">Hosts</a></li>
+            <li><a href="/settings.html" onclick="event.preventDefault(); guardPanelNavigation('/settings.html')">Einstellungen</a></li>
         </ul>
     </div>
 
@@ -44,5 +45,10 @@
             </div>
         </div>
     </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    requireAuth();
+});
+</script>
 </body>
 </html>
