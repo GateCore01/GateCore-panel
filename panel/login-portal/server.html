@@ -11,7 +11,7 @@
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
-        <h2>GamePanel</h2>
+        <h2>GateCore</h2>
         <ul>
             <li><a href="/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
             <li class="active">Server</li>
@@ -32,12 +32,21 @@
 
         <div class="content Server-content">
             <div class="chart Server-form-card">
-                <h2>Server hinzufügen</h2>
-                <p>Trage die Server-Daten ein, um das Webpanel mit API- und Server-Einstellungen zu speichern.</p>
+                <h2>Dienst hinzufügen</h2>
+                <p>Trage die Systemd-Dienst-Daten ein, um sie im Webpanel zu verwalten.</p>
                 <table>
                     <tr>
-                        <td>Server-Name</td>
-                        <td><input type="text" id="input-server-name" placeholder="z. B. Mein Server"></td>
+                        <td>Server-Typ</td>
+                        <td>
+                            <select id="select-server-kind">
+                                <option value="systemd">Systemd-Dienst</option>
+                                <option value="windows">Windows-Dienst</option>
+                            </select>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Dienst-Name</td>
+                        <td><input type="text" id="input-server-name" placeholder="z. B. nginx"></td>
                     </tr>
                     <tr>
                         <td>Host auswählen</td>
@@ -48,29 +57,41 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Server-Pfad</td>
-                        <td><input type="text" id="input-server-path" placeholder="z. B. /home/minecraft/server1"></td>
+                        <td>Dienst-Pfad</td>
+                        <td><input type="text" id="input-server-path" placeholder="z. B. /etc/systemd/system/nginx.service"></td>
                     </tr>
                     <tr>
-                        <td>Startbefehl</td>
-                        <td><input type="text" id="input-server-start-command" placeholder="z. B. java -Xmx4096M -Xms4096M -jar server.jar nogui"></td>
+                        <td>Minecraft-Startbefehl</td>
+                        <td><input type="text" id="input-minecraft-command" placeholder="z. B. java -jar server.jar"></td>
+                    </tr>
+                    <tr>
+                        <td>Systemd-Startbefehl</td>
+                        <td><input type="text" id="input-systemd-command" placeholder="z. B. systemctl start nginx"></td>
+                    </tr>
+                    <tr>
+                        <td>Auto-Start</td>
+                        <td><input type="checkbox" id="input-autostart" checked></td>
                     </tr>
                 </table>
                 <br>
-                <button id="save-server-button">Server speichern</button>
+                <button id="save-server-button">Dienst speichern</button>
                 <div id="message-box" class="message-box"></div>
             </div>
 
             <div class="logs Server-list-card">
-                <h2>Aktuelle Server</h2>
-                <p>Hier werden alle geladenen Server aus der API oder dem lokalen Speicher angezeigt.</p>
+                <h2>Aktuelle Dienste</h2>
+                <p>Hier werden alle gespeicherten Systemd-Dienste mit Auto-Start und Status angezeigt.</p>
                 <table>
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Host</th>
                             <th>Pfad</th>
-                            <th>Startbefehl</th>
+                            <th>Typ</th>
+                            <th>Minecraft</th>
+                            <th>Systemd</th>
+                            <th>Auto-Start</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="server-table-body">

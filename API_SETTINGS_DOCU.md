@@ -6,7 +6,7 @@
   - Sendet die allgemeinen Einstellungen des Panels.
   - Body-Beispiel:
     {
-      "panelName": "GamePanel",
+      "panelName": "GateCore",
       "language": "Deutsch",
       "emailNotifications": true,
       "darkMode": false,

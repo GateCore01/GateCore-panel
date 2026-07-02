@@ -1,3 +1,48 @@
+const THEME_COOKIE_NAME = 'gatecore_dark_mode';
+
+function getThemeCookie() {
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+        const [name, value] = cookie.split('=');
+        if (name.trim() === THEME_COOKIE_NAME) {
+            return value === '1' ? '1' : '0';
+        }
+    }
+    return null;
+}
+
+function setThemeCookie(isDark) {
+    document.cookie = `${THEME_COOKIE_NAME}=${isDark ? '1' : '0'}; Path=/; Max-Age=31536000; SameSite=Lax`;
+}
+
+function applyTheme(isDark) {
+    document.body.classList.toggle('dark-theme', isDark);
+
+    const checkbox = document.getElementById('dark-mode');
+    if (checkbox) {
+        checkbox.checked = isDark;
+    }
+
+    const toggleButton = document.getElementById('dark-mode-toggle');
+    if (toggleButton) {
+        toggleButton.textContent = isDark ? 'Hellmodus' : 'Dark Mode umschalten';
+    }
+
+    setThemeCookie(isDark);
+}
+
+function toggleTheme() {
+    const isDark = !document.body.classList.contains('dark-theme');
+    applyTheme(isDark);
+}
+
+function initializeTheme() {
+    const storedTheme = getThemeCookie();
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = storedTheme === null ? prefersDark : storedTheme === '1';
+    applyTheme(isDark);
+}
+
 async function login() {
     const username = document.getElementById('username')?.value || '';
     const password = document.getElementById('password')?.value || '';
@@ -74,4 +119,9 @@ async function guardPanelNavigation(targetUrl) {
 }
 
 window.guardPanelNavigation = guardPanelNavigation;
-window.addEventListener('DOMContentLoaded', attachLogoutButton);
+window.applyTheme = applyTheme;
+window.toggleTheme = toggleTheme;
+window.addEventListener('DOMContentLoaded', () => {
+    attachLogoutButton();
+    initializeTheme();
+});

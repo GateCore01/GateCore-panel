@@ -10,7 +10,7 @@
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
-        <h2>GamePanel</h2>
+        <h2>GateCore</h2>
         <ul>
             <li class="active">Dashboard</li>
             <li><a href="/server.html" onclick="event.preventDefault(); guardPanelNavigation('/server.html')">Server</a></li>
@@ -107,6 +107,10 @@ new Chart(document.getElementById('usageChart'), {
         }]
     }
 });
+</script>
+
+<script>
+requireAuth();
 </script>
 
 </body>

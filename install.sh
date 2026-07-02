@@ -34,12 +34,12 @@ services:
     image: osixia/openldap:1.5.0
     container_name: ldap
     environment:
-      - LDAP_DOMAIN=gamepanel.local
+      - LDAP_DOMAIN=gatecore.local
       - LDAP_ADMIN_USERNAME=admin
       - LDAP_ADMIN_PASSWORD=$LDAP_ADMIN_PASSWORD
-      - LDAP_BASE_DN=dc=gamepanel,dc=local
+      - LDAP_BASE_DN=dc=gatecore,dc=local
       - LDAP_TLS=false
-      - LDAP_ORGANISATION=GamePanel
+      - LDAP_ORGANISATION=GateCore
       - LDAP_LOG_LEVEL=256
       - network_mode=127.0.0.1
     ports:

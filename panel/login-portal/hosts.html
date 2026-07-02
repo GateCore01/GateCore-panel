@@ -10,7 +10,7 @@
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
-        <h2>GamePanel</h2>
+        <h2>GateCore</h2>
         <ul>
             <li><a href="/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
             <li><a href="/server.html" onclick="event.preventDefault(); guardPanelNavigation('/server.html')">Server</a></li>
@@ -43,13 +43,24 @@
                         <td><input type="text" id="input-host-address" placeholder="z. B. 192.168.0.100"></td>
                     </tr>
                     <tr>
-                        <td>API-Adresse</td>
-                        <td><input type="text" id="input-api-url" placeholder="/api/hosts" value="/api/hosts"></td>
+                        <td>SSH-Benutzer</td>
+                        <td><input type="text" id="input-ssh-user" placeholder="z. B. root"></td>
+                    </tr>
+                    <tr>
+                        <td>SSH-Passwort</td>
+                        <td><input type="password" id="input-ssh-password" placeholder="Passwort eingeben..."></td>
+                    </tr>
+                    <tr>
+                        <td>SSH-Port</td>
+                        <td><input type="number" id="input-ssh-port" placeholder="z. B. 22" value="22"></td>
+                    </tr>
+                    <tr>
+                        <td>Storage-Pfad</td>
+                        <td><input type="text" id="input-storage-path" placeholder="z. B. /var/lib/hosts"></td>
                     </tr>
                 </table>
                 <br>
                 <button id="save-host-button">Host speichern</button>
-                <button id="export-csv-button" class="export-button">CSV herunterladen</button>
                 <div id="message-box" class="message-box"></div>
             </div>
 
@@ -61,8 +72,11 @@
                         <tr>
                             <th>Name</th>
                             <th>Adresse</th>
-                            <th>API</th>
+                            <th>SSH-Benutzer</th>
+                            <th>SSH-Port</th>
+                            <th>Storage-Pfad</th>
                             <th>Status</th>
+                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="host-table-body">

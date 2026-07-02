@@ -136,6 +136,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         showStatus(error.message || 'Konfiguration konnte nicht geladen werden.', true);
     }
 
+    const savedTheme = document.cookie.includes('gatecore_dark_mode=1');
+    window.applyTheme?.(savedTheme);
+
     document.getElementById('save-settings-btn')?.addEventListener('click', saveSettings);
     document.getElementById('change-password-btn')?.addEventListener('click', changePassword);
+    document.getElementById('dark-mode')?.addEventListener('change', (event) => window.applyTheme?.(event.target.checked));
+    document.getElementById('dark-mode-toggle')?.addEventListener('click', () => window.toggleTheme?.());
 });
