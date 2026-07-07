@@ -6,16 +6,15 @@
     <title>Server</title>
     <link rel="stylesheet" href="/css/styles.css">
     <script src="/js/auth.js"></script>
-    <script src="/js/add-server.js" defer></script>
-    <script src="/js/scripts-add-hosts.js" defer></script>
+    <script src="/js/server-add.js" defer></script>
 </head>
 <body class="panel-sidebar">
     <div class="sidebar">
         <h2>GateCore</h2>
         <ul>
             <li><a href="/login-portal/panel.html" onclick="event.preventDefault(); guardPanelNavigation('/panel.html')">Dashboard</a></li>
-            <li class="active">Server</li>
-            <li><a href="/login-portal/server-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/server-shell.html')">Server-Shell</a></li>
+            <li class="active">Server-Add</li>
+            <li><a href="/login-portal/server-verwaltung.html" onclick="event.preventDefault(); guardPanelNavigation('/server-verwaltung.html')">Server-Verwaltung</a></li>
             <li><a href="/login-portal/host-shell.html" onclick="event.preventDefault(); guardPanelNavigation('/host-shell.html')">Host-Shell</a></li>
             <li><a href="/login-portal/backup.html" onclick="event.preventDefault(); guardPanelNavigation('/backup.html')">Backups</a></li>
             <li><a href="/login-portal/user.html" onclick="event.preventDefault(); guardPanelNavigation('/user.html')">Benutzerverwaltung</a></li>
@@ -33,14 +32,14 @@
         <div class="content Server-content">
             <div class="chart Server-form-card">
                 <h2>Dienst hinzufügen</h2>
-                <p>Trage die Systemd-Dienst-Daten ein, um sie im Webpanel zu verwalten.</p>
+                <p>Trage die Dienst-Daten ein, um sie im Webpanel zu verwalten.</p>
                 <table>
                     <tr>
                         <td>Server-Typ</td>
                         <td>
-                            <select id="select-server-kind">
-                                <option value="systemd">Systemd-Dienst</option>
-                                <option value="windows">Windows-Dienst</option>
+                            <select id="select-server-system">
+                                <option value="linux">Linux</option>
+                                <option value="windows">Windows</option>
                             </select>
                         </td>
                     </tr>
@@ -57,20 +56,16 @@
                         </td>
                     </tr>
                     <tr>
-                        <td>Dienst-Pfad</td>
-                        <td><input type="text" id="input-server-path" placeholder="z. B. /etc/systemd/system/nginx.service"></td>
-                    </tr>
-                    <tr>
-                        <td>Minecraft-Startbefehl</td>
-                        <td><input type="text" id="input-minecraft-command" placeholder="z. B. java -jar server.jar"></td>
-                    </tr>
-                    <tr>
-                        <td>Systemd-Startbefehl</td>
-                        <td><input type="text" id="input-systemd-command" placeholder="z. B. systemctl start nginx"></td>
+                        <td>Startbefehl</td>
+                        <td><input type="text" id="input-start-command" placeholder="z. B. bash start.sh"></td>
                     </tr>
                     <tr>
                         <td>Auto-Start</td>
                         <td><input type="checkbox" id="input-autostart" checked></td>
+                    </tr>
+                    <tr>
+                        <td>Upload-File</td>
+                        <td><input type="file" id="input-upload"></td>
                     </tr>
                 </table>
                 <br>
@@ -80,18 +75,16 @@
 
             <div class="logs Server-list-card">
                 <h2>Aktuelle Dienste</h2>
-                <p>Hier werden alle gespeicherten Systemd-Dienste mit Auto-Start und Status angezeigt.</p>
+                <p>Hier werden alle gespeicherten Dienste angezeigt.</p>
                 <table>
                     <thead>
                         <tr>
                             <th>Name</th>
                             <th>Host</th>
-                            <th>Pfad</th>
                             <th>Typ</th>
-                            <th>Minecraft</th>
-                            <th>Systemd</th>
+                            <th>Startbefehl</th>
                             <th>Auto-Start</th>
-                            <th>Status</th>
+                            <th>Aktion</th>
                         </tr>
                     </thead>
                     <tbody id="server-table-body">

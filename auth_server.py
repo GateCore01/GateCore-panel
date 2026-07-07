@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
+import base64
 import json
+import os
+import re
 import secrets
+import shlex
 import subprocess
+import tempfile
 import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, quote, unquote, urlparse
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 ROOT_DIR = PROJECT_ROOT / "panel"
@@ -67,6 +72,160 @@ def save_servers(servers):
         handle.write("\n")
 
 
+def find_host_for_server(server):
+    hosts = load_hosts()
+    host_value = str(server.get("host", "") or "").strip()
+    for host in hosts:
+        if str(host.get("address", "") or "").strip() == host_value:
+            return host
+        if str(host.get("name", "") or "").strip() == host_value:
+            return host
+    return None
+
+
+def build_server_remote_path(server, relative_path=""):
+    host = find_host_for_server(server) or {}
+    base_path = str(host.get("storagePath") or "/var/www/html").strip() or "/var/www/html"
+    service_name = re.sub(r"[^A-Za-z0-9._-]+", "-", str(server.get("name", "") or "service").strip() or "service")
+    base_path = f"{base_path.rstrip('/')}/{service_name}"
+
+    if not relative_path:
+        return base_path
+
+    clean_relative = []
+    for part in relative_path.split("/"):
+        if not part or part == ".":
+            continue
+        if part == "..":
+            raise ValueError("Ungültiger Pfad")
+        clean_relative.append(part)
+
+    if not clean_relative:
+        return base_path
+    return f"{base_path.rstrip('/')}/{'/'.join(clean_relative)}"
+
+
+def list_remote_entries(host, remote_path):
+    address = str(host.get("address", "") or "").strip()
+    ssh_user = str(host.get("sshUser") or host.get("user") or "root").strip() or "root"
+    ssh_password = str(host.get("sshPassword") or "").strip()
+    ssh_port = str(host.get("sshPort") or "22").strip() or "22"
+
+    script = (
+        "import json, pathlib, sys;"
+        "target = pathlib.Path(sys.argv[1]);"
+        "target.mkdir(parents=True, exist_ok=True);"
+        "entries = [{\"name\": child.name, \"isDirectory\": child.is_dir()} for child in sorted(target.iterdir(), key=lambda item: (not item.is_dir(), item.name.lower()))];"
+        "print(json.dumps({\"path\": str(target), \"entries\": entries}))"
+    )
+    command = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-p", ssh_port, f"{ssh_user}@{address}", "python3", "-c", script, remote_path]
+    if ssh_password:
+        command = ["sshpass", "-p", ssh_password] + command
+
+    process = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or "Ordner konnte nicht gelesen werden")
+
+    payload = json.loads(process.stdout.strip() or "{}")
+    return payload.get("entries", [])
+
+
+def ensure_remote_directory(host, remote_dir):
+    address = str(host.get("address", "") or "").strip()
+    ssh_user = str(host.get("sshUser") or host.get("user") or "root").strip() or "root"
+    ssh_password = str(host.get("sshPassword") or "").strip()
+    ssh_port = str(host.get("sshPort") or "22").strip() or "22"
+
+    if not address:
+        raise RuntimeError("Keine Host-Adresse vorhanden")
+
+    command = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-p", ssh_port, f"{ssh_user}@{address}", "mkdir", "-p", remote_dir]
+    if ssh_password:
+        command = ["sshpass", "-p", ssh_password] + command
+
+    process = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or process.stdout.strip() or "Remote-Ordner konnte nicht angelegt werden")
+
+
+def upload_file_via_sftp(host, local_path, remote_path):
+    address = str(host.get("address", "") or "").strip()
+    ssh_user = str(host.get("sshUser") or host.get("user") or "root").strip() or "root"
+    ssh_password = str(host.get("sshPassword") or "").strip()
+    ssh_port = str(host.get("sshPort") or "22").strip() or "22"
+
+    if not address:
+        raise RuntimeError("Keine Host-Adresse vorhanden")
+
+    target_dir = str(Path(remote_path).parent)
+    ensure_remote_directory(host, target_dir)
+
+    remote_target = f"{ssh_user}@{address}:{shlex.quote(remote_path)}"
+    command = ["scp", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-P", ssh_port, local_path, remote_target]
+    if ssh_password:
+        command = ["sshpass", "-p", ssh_password] + command
+
+    process = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or process.stdout.strip() or "Upload fehlgeschlagen")
+
+    return remote_path
+
+
+def download_file_via_scp(host, remote_path, local_path):
+    address = str(host.get("address", "") or "").strip()
+    ssh_user = str(host.get("sshUser") or host.get("user") or "root").strip() or "root"
+    ssh_password = str(host.get("sshPassword") or "").strip()
+    ssh_port = str(host.get("sshPort") or "22").strip() or "22"
+
+    if not address:
+        raise RuntimeError("Keine Host-Adresse vorhanden")
+
+    remote_target = f"{ssh_user}@{address}:{shlex.quote(remote_path)}"
+    command = ["scp", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-P", ssh_port, remote_target, local_path]
+    if ssh_password:
+        command = ["sshpass", "-p", ssh_password] + command
+
+    process = subprocess.run(command, capture_output=True, text=True, timeout=30)
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or process.stdout.strip() or "Download fehlgeschlagen")
+
+    return local_path
+
+
+def delete_remote_file(host, remote_path):
+    address = str(host.get("address", "") or "").strip()
+    ssh_user = str(host.get("sshUser") or host.get("user") or "root").strip() or "root"
+    ssh_password = str(host.get("sshPassword") or "").strip()
+    ssh_port = str(host.get("sshPort") or "22").strip() or "22"
+
+    if not address:
+        raise RuntimeError("Keine Host-Adresse vorhanden")
+
+    script = (
+        "import pathlib, sys;"
+        "target = pathlib.Path(sys.argv[1]);"
+        "exists = target.exists();"
+        "is_dir = target.is_dir() if exists else False;"
+        "sys.exit(3) if not exists else None;"
+        "sys.exit(4) if is_dir else None;"
+        "target.unlink()"
+    )
+    command = ["ssh", "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=no", "-p", ssh_port, f"{ssh_user}@{address}", "python3", "-c", script, remote_path]
+    if ssh_password:
+        command = ["sshpass", "-p", ssh_password] + command
+
+    process = subprocess.run(command, capture_output=True, text=True, timeout=20)
+    if process.returncode == 3:
+        raise RuntimeError("Datei nicht gefunden")
+    if process.returncode == 4:
+        raise RuntimeError("Ordner können hier nicht gelöscht werden")
+    if process.returncode != 0:
+        raise RuntimeError(process.stderr.strip() or process.stdout.strip() or "Löschen fehlgeschlagen")
+
+    return remote_path
+
+
 def distribute_state_to_hosts():
     hosts = load_hosts()
     servers = load_servers()
@@ -119,6 +278,10 @@ class AuthHandler(BaseHTTPRequestHandler):
 
         if path in {"/api/login", "/api/logout", "/api/auth/check", "/api/users", "/api/hosts", "/api/servers", "/api/control/servers"}:
             self.handle_api(path)
+            return
+
+        if path.startswith("/api/servers/"):
+            self.handle_server_files(path)
             return
 
         if self.requires_auth(path):
@@ -179,6 +342,128 @@ class AuthHandler(BaseHTTPRequestHandler):
             return
 
         self.send_json(404, {"success": False, "message": "Endpoint not found"})
+
+    def handle_server_files(self, path):
+        if not self.is_authenticated():
+            self.send_json(401, {"success": False, "message": "Nicht autorisiert"})
+            return
+
+        parsed = urlparse(self.path)
+        segments = [segment for segment in path.split("/") if segment]
+        if len(segments) < 4 or segments[0] != "api" or segments[1] != "servers" or segments[3] != "files":
+            self.send_json(404, {"success": False, "message": "Endpoint not found"})
+            return
+
+        server_id = segments[2]
+        servers = load_servers()
+        server = next((item for item in servers if str(item.get("id", "")).strip() == server_id), None)
+        if not server:
+            self.send_json(404, {"success": False, "message": "Server nicht gefunden"})
+            return
+
+        query = parse_qs(parsed.query)
+        relative_path = unquote(query.get("path", [""])[0]).strip()
+        file_action = segments[4] if len(segments) > 4 else ""
+
+        if self.command == "GET" and file_action == "download":
+            if not relative_path:
+                self.send_json(400, {"success": False, "message": "Dateipfad ist erforderlich"})
+                return
+
+            temp_path = None
+            try:
+                remote_file = build_server_remote_path(server, relative_path)
+                host = find_host_for_server(server)
+                if not host:
+                    self.send_json(404, {"success": False, "message": "Host nicht gefunden"})
+                    return
+
+                with tempfile.NamedTemporaryFile(delete=False) as handle:
+                    temp_path = handle.name
+
+                download_file_via_scp(host, remote_file, temp_path)
+                content = Path(temp_path).read_bytes()
+                filename = Path(remote_file).name or "download.bin"
+
+                self.send_response(200)
+                self.send_header("Content-Type", "application/octet-stream")
+                self.send_header("Content-Length", str(len(content)))
+                self.send_header("Content-Disposition", f"attachment; filename*=UTF-8''{quote(filename)}")
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(content)
+            except ValueError as error:
+                self.send_json(400, {"success": False, "message": str(error)})
+            except Exception as error:
+                self.send_json(502, {"success": False, "message": f"Download fehlgeschlagen: {error}"})
+            finally:
+                if temp_path and os.path.exists(temp_path):
+                    os.remove(temp_path)
+            return
+
+        if self.command == "GET" and not file_action:
+            try:
+                remote_path = build_server_remote_path(server, relative_path)
+                host = find_host_for_server(server)
+                if not host:
+                    self.send_json(404, {"success": False, "message": "Host nicht gefunden"})
+                    return
+                entries = list_remote_entries(host, remote_path)
+                self.send_json(200, {"path": remote_path, "entries": entries})
+            except ValueError as error:
+                self.send_json(400, {"success": False, "message": str(error)})
+            except Exception as error:
+                self.send_json(502, {"success": False, "message": f"Datei-Manager Fehler: {error}"})
+            return
+
+        if self.command == "DELETE" and file_action == "delete":
+            if not relative_path:
+                self.send_json(400, {"success": False, "message": "Dateipfad ist erforderlich"})
+                return
+
+            try:
+                remote_file = build_server_remote_path(server, relative_path)
+                host = find_host_for_server(server)
+                if not host:
+                    self.send_json(404, {"success": False, "message": "Host nicht gefunden"})
+                    return
+
+                delete_remote_file(host, remote_file)
+                self.send_json(200, {"success": True, "message": "Datei gelöscht", "path": remote_file})
+            except ValueError as error:
+                self.send_json(400, {"success": False, "message": str(error)})
+            except Exception as error:
+                self.send_json(502, {"success": False, "message": f"Löschen fehlgeschlagen: {error}"})
+            return
+
+        if self.command == "POST" and not file_action:
+            try:
+                length = int(self.headers.get("Content-Length", 0))
+                body = self.rfile.read(length) if length else b""
+                filename = Path((self.headers.get("X-File-Name") or "upload.bin").strip() or "upload.bin").name
+                target_path = build_server_remote_path(server, relative_path)
+                host = find_host_for_server(server)
+                if not host:
+                    self.send_json(404, {"success": False, "message": "Host nicht gefunden"})
+                    return
+
+                with tempfile.NamedTemporaryFile(delete=False) as handle:
+                    handle.write(body)
+                    temp_path = handle.name
+
+                try:
+                    remote_file = f"{target_path.rstrip('/')}/{filename}"
+                    upload_file_via_sftp(host, temp_path, remote_file)
+                finally:
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+
+                self.send_json(200, {"success": True, "message": "Datei hochgeladen", "path": remote_file})
+            except Exception as error:
+                self.send_json(502, {"success": False, "message": f"Upload fehlgeschlagen: {error}"})
+            return
+
+        self.send_json(405, {"success": False, "message": "Method not allowed"})
 
     def proxy_control_backend(self, path):
         method = self.command
@@ -364,7 +649,13 @@ class AuthHandler(BaseHTTPRequestHandler):
             "name": (data.get("name") or "").strip(),
             "host": (data.get("host") or "").strip(),
             "path": (data.get("path") or "").strip(),
+            "type": data.get("type") or data.get("serverType") or "linux",
+            "system": data.get("system") or data.get("type") or data.get("serverType") or "linux",
+            "serverType": data.get("serverType") or data.get("type") or "linux",
             "startCommand": (data.get("startCommand") or "").strip(),
+            "systemdCommand": (data.get("systemdCommand") or data.get("serviceStartCommand") or data.get("controlCommand") or "").strip(),
+            "serviceStartCommand": (data.get("serviceStartCommand") or data.get("systemdCommand") or "").strip(),
+            "controlCommand": (data.get("controlCommand") or data.get("systemdCommand") or "").strip(),
             "autostart": autostart,
             "onlineStatus": online_status,
             "status": online_status,
@@ -420,7 +711,7 @@ class AuthHandler(BaseHTTPRequestHandler):
             return False
         if path.startswith("/login-portal/"):
             return True
-        return path in {"/panel.html", "/server.html", "/server-shell.html", "/host-shell.html", "/backup.html", "/user.html", "/hosts.html", "/settings.html"}
+        return path in {"/panel.html", "/server.html", "/server-shell.html", "/server-add.html", "/server-verwaltung.html", "/host-shell.html", "/backup.html", "/user.html", "/hosts.html", "/settings.html"}
 
     def is_authenticated(self):
         cookie_header = self.headers.get("Cookie", "")
@@ -443,11 +734,13 @@ class AuthHandler(BaseHTTPRequestHandler):
     def serve_static(self, path):
         if path in {"/", "/index.html"}:
             file_path = ROOT_DIR / "index.html"
-        elif path in {"/panel.html", "/server.html", "/server-shell.html", "/host-shell.html", "/backup.html", "/user.html", "/hosts.html", "/settings.html"}:
+        elif path in {"/panel.html", "/server.html", "/server-shell.html", "/server-add.html", "/server-verwaltung.html", "/host-shell.html", "/backup.html", "/user.html", "/hosts.html", "/settings.html"}:
             alias_map = {
                 "/panel.html": "login-portal/panel.html",
                 "/server.html": "login-portal/server.html",
                 "/server-shell.html": "login-portal/server-shell.html",
+                "/server-add.html": "login-portal/server-add.html",
+                "/server-verwaltung.html": "login-portal/server-verwaltung.html",
                 "/host-shell.html": "login-portal/host-shell.html",
                 "/backup.html": "login-portal/backup.html",
                 "/user.html": "login-portal/user.html",
