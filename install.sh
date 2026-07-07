@@ -1,122 +1,332 @@
-########################################
-# Install script for the Web Panel     #
-# This script will install the Web Panel and its dependencies on your system.
-# It is recommended to run this script as root or with sudo privileges.
-########################################
-# Creator: Korbinian Musch
-# License: MIT License
-# Date Created: 06.06.2026
-########################################
-#!/bin/bash
+#!/bin/sh
+#
+# GateCore Panel installer
+# Supported: Debian/Ubuntu, openSUSE, Rocky Linux/RHEL-compatible systems, FreeBSD
 
-# Check if the script is run as root
-if [ "$EUID" -ne 0 ]; then
-  echo "Please run this script as root or with sudo privileges."
+set -eu
+
+APP_NAME="gatecore-panel"
+APP_USER="${APP_USER:-gatecore}"
+APP_GROUP="${APP_GROUP:-gatecore}"
+PREFIX="${PREFIX:-/opt/gatecore-panel}"
+REPO_URL="${REPO_URL:-https://github.com/GateCore01/GameServer-panel.git}"
+AUTH_PORT="${AUTH_PORT:-8000}"
+CONTROL_PORT="${CONTROL_PORT:-8001}"
+SKIP_PACKAGES="${SKIP_PACKAGES:-0}"
+FORCE_CONFIG="${FORCE_CONFIG:-0}"
+
+log() {
+  printf '%s\n' "==> $*"
+}
+
+warn() {
+  printf '%s\n' "WARN: $*" >&2
+}
+
+die() {
+  printf '%s\n' "ERROR: $*" >&2
   exit 1
-fi
+}
 
-# Update the package list and install dependencies
-echo "Updating package list and installing dependencies..."
-apt update
-apt install -y python3 python3-pip python3-venv apache2 libapache2-mod-wsgi-py3 ldap-utils git wget docker-compose docker-cli docker.io openssl
+need_root() {
+  [ "$(id -u)" -eq 0 ] || die "Bitte als root ausfuehren, z. B. mit sudo ./install.sh"
+}
 
-# Generate a random password for the LDAP admin user
-LDAP_ADMIN_PASSWORD=$(openssl rand -base64 12)
-echo "Generated LDAP admin password: $LDAP_ADMIN_PASSWORD"
+detect_os() {
+  OS_NAME="$(uname -s)"
+  OS_ID=""
+  OS_LIKE=""
 
-# Docker LDAP server setup
-echo "Setting up Docker LDAP server..."
-mkdir -p /opt/ldap/
-cat <<EOL > /opt/ldap/docker-compose.yml
-version: '3'
-services:
-  ldap:
-    image: osixia/openldap:1.5.0
-    container_name: ldap
-    environment:
-      - LDAP_DOMAIN=gatecore.local
-      - LDAP_ADMIN_USERNAME=admin
-      - LDAP_ADMIN_PASSWORD=$LDAP_ADMIN_PASSWORD
-      - LDAP_BASE_DN=dc=gatecore,dc=local
-      - LDAP_TLS=false
-      - LDAP_ORGANISATION=GateCore
-      - LDAP_LOG_LEVEL=256
-      - network_mode=127.0.0.1
-    ports:
-      - "389:389"
-    volumes:
-      - ldap_data:/var/lib/ldap
-      - ldap_config:/etc/ldap/slapd.d
-volumes:
-  ldap_data:
-  ldap_config:
-EOL
+  if [ "$OS_NAME" = "FreeBSD" ]; then
+    OS_ID="freebsd"
+    return
+  fi
 
-# Start the Docker LDAP server
-echo "Starting the Docker LDAP server..."
-cd /opt/ldap/
-docker-compose up -d
+  if [ -r /etc/os-release ]; then
+    # shellcheck disable=SC1091
+    . /etc/os-release
+    OS_ID="${ID:-}"
+    OS_LIKE="${ID_LIKE:-}"
+    return
+  fi
 
-# Download the Web Panel source code
-echo "Downloading the Web Panel source code..."
-git clone https://github.com/Korbinian0/GameServer-Gateway.git
-cd /tmp/
-cd GameServer-Gateway
+  die "Betriebssystem konnte nicht erkannt werden."
+}
 
-# Copy the Web Panel files to the Apache web directory
-echo "Copying Web Panel files to the Apache web directory..."
-cp -r panel/*.html /var/www/html/
-cp -r panel/*.css /var/www/html/
-cp -r panel/*.js /var/www/html/
+has_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
 
-# Copy the python files to the appropriate location and create the directory if it doesn't exist
-mkdir -p /opt/webpanel/
-cp -r panel/python_scripts.py /opt/webpanel/
+install_packages() {
+  [ "$SKIP_PACKAGES" = "1" ] && {
+    log "Paketinstallation wird uebersprungen (SKIP_PACKAGES=1)."
+    return
+  }
 
-# Set the correct permissions for the Web Panel files
-echo "Setting permissions for the Web Panel files..."
-chown -R www-data:www-data /var/www/html/
-chown -R root:root /opt/webpanel/
-chmod -R 755 /var/www/html/
-chmod -R 755 /opt/webpanel/
+  case "$OS_ID" in
+    debian|ubuntu)
+      log "Installiere Pakete mit apt..."
+      apt-get update
+      apt-get install -y python3 git openssh-client sshpass ca-certificates
+      ;;
+    opensuse*|sles)
+      log "Installiere Pakete mit zypper..."
+      zypper --non-interactive refresh
+      zypper --non-interactive install python3 git openssh sshpass ca-certificates
+      ;;
+    rocky|rhel|almalinux|centos|fedora)
+      log "Installiere Pakete mit dnf/yum..."
+      if has_cmd dnf; then
+        dnf install -y python3 git openssh-clients sshpass ca-certificates
+      else
+        yum install -y python3 git openssh-clients sshpass ca-certificates
+      fi
+      ;;
+    freebsd)
+      log "Installiere Pakete mit pkg..."
+      pkg update
+      pkg install -y python3 git sshpass ca_root_nss
+      ;;
+    *)
+      case " $OS_LIKE " in
+        *" debian "*)
+          log "Installiere Pakete mit apt..."
+          apt-get update
+          apt-get install -y python3 git openssh-client sshpass ca-certificates
+          ;;
+        *" rhel "*|*" fedora "*)
+          log "Installiere Pakete mit dnf/yum..."
+          if has_cmd dnf; then
+            dnf install -y python3 git openssh-clients sshpass ca-certificates
+          else
+            yum install -y python3 git openssh-clients sshpass ca-certificates
+          fi
+          ;;
+        *" suse "*)
+          log "Installiere Pakete mit zypper..."
+          zypper --non-interactive refresh
+          zypper --non-interactive install python3 git openssh sshpass ca-certificates
+          ;;
+        *)
+          die "Nicht unterstuetzte Distribution: ${OS_ID:-unbekannt}. Nutze SKIP_PACKAGES=1, wenn alle Pakete bereits installiert sind."
+          ;;
+      esac
+      ;;
+  esac
+}
 
-# Create the Systemd service file for the Web Panel
-echo "Creating Systemd service file for the Web Panel..."
-cat <<EOL > /etc/systemd/system/webpanel-ldap.service
+find_python() {
+  if has_cmd python3; then
+    PYTHON_BIN="$(command -v python3)"
+  elif has_cmd python; then
+    PYTHON_BIN="$(command -v python)"
+  else
+    die "python3 wurde nicht gefunden."
+  fi
+}
+
+create_user() {
+  if [ "$OS_ID" = "freebsd" ]; then
+    pw groupadd "$APP_GROUP" 2>/dev/null || true
+  elif has_cmd groupadd; then
+    groupadd --system "$APP_GROUP" 2>/dev/null || true
+  fi
+
+  if id "$APP_USER" >/dev/null 2>&1; then
+    log "Benutzer $APP_USER existiert bereits."
+    return
+  fi
+
+  log "Erstelle Systembenutzer $APP_USER..."
+  if [ "$OS_ID" = "freebsd" ]; then
+    pw useradd "$APP_USER" -g "$APP_GROUP" -d "$PREFIX" -s /usr/sbin/nologin -c "GateCore Panel"
+  else
+    if has_cmd useradd; then
+      useradd --system --gid "$APP_GROUP" --home-dir "$PREFIX" --shell /usr/sbin/nologin --comment "GateCore Panel" "$APP_USER"
+    else
+      adduser --system --home "$PREFIX" --no-create-home --group "$APP_USER"
+    fi
+  fi
+}
+
+source_dir() {
+  SCRIPT_DIR="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+  if [ -f "$SCRIPT_DIR/auth_server.py" ] && [ -d "$SCRIPT_DIR/panel" ]; then
+    SRC_DIR="$SCRIPT_DIR"
+    return
+  fi
+
+  has_cmd git || die "git wird benoetigt, wenn install.sh nicht aus dem Repository gestartet wird."
+  TMP_DIR="$(mktemp -d)"
+  log "Klonen von $REPO_URL..."
+  git clone "$REPO_URL" "$TMP_DIR/source"
+  SRC_DIR="$TMP_DIR/source"
+}
+
+copy_tree() {
+  log "Installiere Dateien nach $PREFIX..."
+  mkdir -p "$PREFIX"
+
+  install -m 0755 "$SRC_DIR/auth_server.py" "$PREFIX/auth_server.py"
+  install -m 0755 "$SRC_DIR/control_backend.py" "$PREFIX/control_backend.py"
+
+  rm -rf "$PREFIX/panel"
+  mkdir -p "$PREFIX/panel"
+  cp -R "$SRC_DIR/panel/." "$PREFIX/panel/"
+
+  mkdir -p "$PREFIX/config"
+  for file in auth-config.json hosts.json servers.json settings-config.js settings-config.json users.json; do
+    if [ "$FORCE_CONFIG" = "1" ] || [ ! -e "$PREFIX/config/$file" ]; then
+      install -m 0640 "$SRC_DIR/config/$file" "$PREFIX/config/$file"
+    else
+      log "Behalte vorhandene Konfiguration: config/$file"
+    fi
+  done
+
+  [ -f "$SRC_DIR/LICENSE" ] && install -m 0644 "$SRC_DIR/LICENSE" "$PREFIX/LICENSE"
+  [ -f "$SRC_DIR/README.md" ] && install -m 0644 "$SRC_DIR/README.md" "$PREFIX/README.md"
+
+  chown -R "$APP_USER:$APP_GROUP" "$PREFIX"
+  find "$PREFIX" -type d -exec chmod 0750 {} \;
+  find "$PREFIX" -type f -exec chmod 0640 {} \;
+  chmod 0750 "$PREFIX/auth_server.py" "$PREFIX/control_backend.py"
+}
+
+install_systemd_services() {
+  log "Erstelle systemd Services..."
+  cat > /etc/systemd/system/gatecore-control.service <<EOF
 [Unit]
-Description=Web Panel LDAP Service
+Description=GateCore Panel Control Backend
 After=network.target
 
 [Service]
-User=root
-WorkingDirectory=/opt/webpanel/
-ExecStart=/usr/bin/python3 /opt/webpanel/python_scripts.py
-Restart=always
+Type=simple
+User=$APP_USER
+Group=$APP_GROUP
+WorkingDirectory=$PREFIX
+ExecStart=$PYTHON_BIN $PREFIX/control_backend.py
+Restart=on-failure
+RestartSec=3
 
 [Install]
 WantedBy=multi-user.target
-EOL
+EOF
 
-# Reload Systemd to apply the new service file
-echo "Reloading Systemd..."
-systemctl daemon-reload
+  cat > /etc/systemd/system/gatecore-auth.service <<EOF
+[Unit]
+Description=GateCore Panel Web and Auth Server
+After=network.target gatecore-control.service
+Wants=gatecore-control.service
 
-# Set the LDAP admin password in the Web Panel configuration
-echo "Configuring the Web Panel with the LDAP admin password..."
-sed -i "s/LDAP_PASSWORD/$LDAP_ADMIN_PASSWORD/g" /opt/webpanel/python_scripts.py
+[Service]
+Type=simple
+User=$APP_USER
+Group=$APP_GROUP
+WorkingDirectory=$PREFIX
+ExecStart=$PYTHON_BIN $PREFIX/auth_server.py
+Restart=on-failure
+RestartSec=3
 
-# Enable and start the Web Panel service
-echo "Enabling and starting the Web Panel LDAP service..."
-systemctl enable webpanel-ldap.service
-systemctl start webpanel-ldap.service
+[Install]
+WantedBy=multi-user.target
+EOF
 
-# Restart Apache to apply changes
-echo "Restarting Apache..."
-systemctl restart apache2
+  systemctl daemon-reload
+  systemctl enable gatecore-control.service gatecore-auth.service
+  systemctl restart gatecore-control.service gatecore-auth.service
+}
 
-# Remove the downloaded source code
-echo "Cleaning up..."
-rm -rf /tmp/GameServer-Gateway/
+install_freebsd_services() {
+  log "Erstelle FreeBSD rc.d Services..."
+  cat > /usr/local/etc/rc.d/gatecore_control <<EOF
+#!/bin/sh
 
-# Final message
-echo "Web Panel installation and configuration complete. The Web Panel should now be accessible via your web browser. Please ensure that your LDAP server is running and properly configured to allow the Web Panel to authenticate users."
+# PROVIDE: gatecore_control
+# REQUIRE: NETWORKING
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="gatecore_control"
+rcvar="gatecore_control_enable"
+command="/usr/sbin/daemon"
+command_args="-f -p /var/run/gatecore_control.pid -u $APP_USER -c $PREFIX $PYTHON_BIN $PREFIX/control_backend.py"
+pidfile="/var/run/gatecore_control.pid"
+
+load_rc_config "\$name"
+: \${gatecore_control_enable:="NO"}
+
+run_rc_command "\$1"
+EOF
+
+  cat > /usr/local/etc/rc.d/gatecore_auth <<EOF
+#!/bin/sh
+
+# PROVIDE: gatecore_auth
+# REQUIRE: NETWORKING gatecore_control
+# KEYWORD: shutdown
+
+. /etc/rc.subr
+
+name="gatecore_auth"
+rcvar="gatecore_auth_enable"
+command="/usr/sbin/daemon"
+command_args="-f -p /var/run/gatecore_auth.pid -u $APP_USER -c $PREFIX $PYTHON_BIN $PREFIX/auth_server.py"
+pidfile="/var/run/gatecore_auth.pid"
+
+load_rc_config "\$name"
+: \${gatecore_auth_enable:="NO"}
+
+run_rc_command "\$1"
+EOF
+
+  chmod 0755 /usr/local/etc/rc.d/gatecore_control /usr/local/etc/rc.d/gatecore_auth
+  sysrc gatecore_control_enable=YES
+  sysrc gatecore_auth_enable=YES
+  service gatecore_control restart || service gatecore_control start
+  service gatecore_auth restart || service gatecore_auth start
+}
+
+print_summary() {
+  HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}' || true)"
+  [ -n "$HOST_IP" ] || HOST_IP="$(hostname 2>/dev/null || printf 'SERVER-IP')"
+
+  cat <<EOF
+
+GateCore Panel wurde installiert.
+
+Pfad:        $PREFIX
+Web/API:     http://$HOST_IP:$AUTH_PORT
+Control API: http://127.0.0.1:$CONTROL_PORT
+Login:       admin / admin123
+
+Wichtige Dateien:
+  $PREFIX/config/auth-config.json
+  $PREFIX/config/users.json
+  $PREFIX/config/hosts.json
+  $PREFIX/config/servers.json
+
+Bitte aendere die Standardpasswoerter direkt nach der Installation.
+EOF
+}
+
+main() {
+  need_root
+  detect_os
+  install_packages
+  find_python
+  create_user
+  source_dir
+  copy_tree
+
+  if [ "$OS_ID" = "freebsd" ]; then
+    install_freebsd_services
+  else
+    has_cmd systemctl || die "systemctl wurde nicht gefunden. Fuer diese Linux-Installation wird systemd erwartet."
+    install_systemd_services
+  fi
+
+  print_summary
+}
+
+main "$@"
