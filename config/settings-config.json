@@ -1,9 +1,0 @@
-{
-  "apiBaseUrl": "https://example-api.local",
-  "endpoints": {
-    "settings": "/settings",
-    "password": "/password"
-  },
-  "uiSettings": {},
-  "securitySettings": {}
-}
