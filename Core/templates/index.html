@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login GateCore-Panel</title>
+    <link rel="stylesheet" href="/css/login.css">
+    <script src="/js/login.js"></script>
+</head>
+<body>
+
+<div class="login-page">
+
+    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+
+    <div class="login-container">
+        <h1>Login GateCore-Panel</h1>
+
+        <form id="loginForm">
+
+            <div class="form-group">
+                <label for="username">Benutzername</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    autocomplete="username"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Passwort</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    autocomplete="current-password"
+                    required>
+            </div>
+
+            <button type="submit">Anmelden</button>
+
+        </form>
+    </div>
+
+</div>
+
+<dialog id="errorDialog">
+    <p id="errorText">Login fehlgeschlagen.</p>
+    <button id="closeDialog">Schließen</button>
+</dialog>
+
+</body>
+</html>
