@@ -1,0 +1,655 @@
+/* -------------------------------------------------
+   Reset
+------------------------------------------------- */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* -------------------------------------------------
+   Body
+------------------------------------------------- */
+
+body {
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #ff9100 0%, #ff00ff 100%);
+    min-height: 100vh;
+    color: #333;
+}
+
+/* -------------------------------------------------
+   Sidebar
+------------------------------------------------- */
+
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 260px;
+    height: 100vh;
+    background: #ffffff;
+    box-shadow: 4px 0 20px rgba(0,0,0,0.15);
+    padding: 25px;
+}
+
+.header-svg-gati {
+    display: block;
+    width: 120px;
+    margin: 0 auto 20px auto;
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #1e3c72;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    margin-bottom: 12px;
+}
+
+.sidebar a {
+    display: block;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 600;
+    transition: 0.25s;
+}
+
+.sidebar a:hover {
+    background: linear-gradient(135deg, #ff9100, #ff00ff);
+    color: white;
+}
+
+/* -------------------------------------------------
+   Obere Taskbar
+------------------------------------------------- */
+
+.taskbar-oben {
+    position: fixed;
+    left: 260px;
+    right: 0;
+    top: 0;
+
+    height: 80px;
+
+    background: white;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 0 30px;
+
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.taskbar-oben h1 {
+    color: #1e3c72;
+}
+
+#logoutButton {
+
+    padding: 10px 22px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: .25s;
+}
+
+#logoutButton:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 5px 15px rgba(0,0,0,.25);
+
+}
+
+/* -------------------------------------------------
+   Dashboard
+------------------------------------------------- */
+
+.statistiken {
+
+    margin-left: 280px;
+    margin-top: 110px;
+
+    padding: 30px;
+
+}
+
+.statistiken h2 {
+
+    color: white;
+
+    margin-bottom: 25px;
+
+}
+
+/* -------------------------------------------------
+   Karten
+------------------------------------------------- */
+
+.dashboard-card {
+
+    width: 250px;
+
+    background: white;
+
+    border-radius: 15px;
+
+    padding: 25px;
+
+    text-align: center;
+
+    box-shadow: 0 10px 25px rgba(0,0,0,.2);
+
+    transition: .25s;
+
+}
+
+.dashboard-card:hover {
+
+    transform: translateY(-5px);
+
+}
+
+.dashboard-card h2 {
+
+    color: #1e3c72;
+
+    font-size: 20px;
+
+    margin-bottom: 20px;
+
+}
+
+#lxc-count {
+
+    font-size: 60px;
+
+    font-weight: bold;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+}
+
+#server-count {
+
+    font-size: 60px;
+
+    font-weight: bold;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+}
+
+#cpu-usage {
+
+    font-size: 60px;
+
+    font-weight: bold;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+}
+
+#ram-usage {
+
+    font-size: 60px;
+
+    font-weight: bold;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+}
+
+#storage-usage {
+
+    font-size: 60px;
+
+    font-weight: bold;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    background-clip: text;
+    -webkit-background-clip: text;
+
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+
+}
+
+
+/* -------------------------------------------------
+   Grid für spätere Karten
+------------------------------------------------- */
+
+.dashboard-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(auto-fit,minmax(250px,1fr));
+
+    gap: 25px;
+
+}
+
+/* -------------------------------------------------
+   Responsive
+------------------------------------------------- */
+
+@media (max-width:900px){
+
+    .sidebar{
+
+        width:200px;
+
+    }
+
+    .taskbar-oben{
+
+        left:200px;
+
+    }
+
+    .statistiken{
+
+        margin-left:220px;
+
+    }
+
+}
+
+@media (max-width:700px){
+
+    .sidebar{
+
+        position:relative;
+
+        width:100%;
+
+        height:auto;
+
+    }
+
+    .taskbar-oben{
+
+        position:relative;
+
+        left:0;
+
+    }
+
+    .statistiken{
+
+        margin:20px;
+
+    }
+
+}
+
+/* -------------------------------------------------
+   Inhalt
+------------------------------------------------- */
+
+.content {
+    margin-left: 280px;
+    margin-top: 110px;
+    padding: 30px;
+}
+
+/* -------------------------------------------------
+   Große Karten
+------------------------------------------------- */
+
+.form-card,
+.table-card {
+    width: 100%;
+    max-width: 1200px;
+    background: #ffffff;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 10px 25px rgba(0,0,0,.2);
+}
+
+.form-card h2,
+.table-card h2 {
+    color: #1e3c72;
+    margin-bottom: 25px;
+}
+
+/* -------------------------------------------------
+   Formulare
+------------------------------------------------- */
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+
+    width: 100%;
+
+    padding: 12px 15px;
+
+    border: 1px solid #d0d0d0;
+
+    border-radius: 8px;
+
+    font-size: 15px;
+
+    transition: .25s;
+
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+
+    outline: none;
+
+    border-color: #ff9100;
+
+    box-shadow: 0 0 0 3px rgba(255,145,0,.2);
+
+}
+
+/* -------------------------------------------------
+   Button Zeile
+------------------------------------------------- */
+
+.button-row {
+
+    display: flex;
+
+    gap: 15px;
+
+    margin-top: 25px;
+
+}
+
+.button-row button {
+
+    flex: 1;
+
+}
+
+/* -------------------------------------------------
+   Buttons
+------------------------------------------------- */
+
+button {
+
+    padding: 12px 20px;
+
+    border: none;
+
+    border-radius: 8px;
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    color: white;
+
+    font-size: 15px;
+
+    font-weight: bold;
+
+    cursor: pointer;
+
+    transition: .25s;
+
+}
+
+button:hover {
+
+    transform: translateY(-2px);
+
+    box-shadow: 0 5px 15px rgba(0,0,0,.25);
+
+}
+
+button:active {
+
+    transform: scale(.98);
+
+}
+
+/* -------------------------------------------------
+   Statusanzeige
+------------------------------------------------- */
+
+#status {
+
+    margin-top: 25px;
+
+    font-weight: bold;
+
+    font-size: 15px;
+
+}
+
+.status-success {
+
+    color: #198754;
+
+}
+
+.status-error {
+
+    color: #dc3545;
+
+}
+
+/* -------------------------------------------------
+   Tabelle
+------------------------------------------------- */
+
+table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+
+    margin-top: 20px;
+
+}
+
+thead {
+
+    background: linear-gradient(135deg,#ff9100,#ff00ff);
+
+    color: white;
+
+}
+
+th {
+
+    padding: 15px;
+
+    text-align: left;
+
+}
+
+td {
+
+    padding: 15px;
+
+    border-bottom: 1px solid #e5e5e5;
+
+}
+
+tbody tr {
+
+    transition: .2s;
+
+}
+
+tbody tr:hover {
+
+    background: #f8f8f8;
+
+}
+
+/* -------------------------------------------------
+   Aktionsbuttons
+------------------------------------------------- */
+
+.action-buttons {
+
+    display: flex;
+
+    gap: 8px;
+
+}
+
+.action-buttons button {
+
+    min-width: 42px;
+
+    padding: 8px;
+
+}
+
+.btn-test {
+
+    background: #28a745;
+
+}
+
+.btn-edit {
+
+    background: #0d6efd;
+
+}
+
+.btn-delete {
+
+    background: #dc3545;
+
+}
+
+.btn-test:hover,
+.btn-edit:hover,
+.btn-delete:hover {
+
+    opacity: .9;
+
+}
+
+/* -------------------------------------------------
+   Leere Tabelle
+------------------------------------------------- */
+
+.empty-row {
+
+    text-align: center;
+
+    color: #888;
+
+    font-style: italic;
+
+}
+
+/* -------------------------------------------------
+   Responsive
+------------------------------------------------- */
+
+@media (max-width:1000px){
+
+    .content,
+    .statistiken{
+
+        margin-left:220px;
+
+    }
+
+    .button-row{
+
+        flex-direction:column;
+
+    }
+
+}
+
+@media (max-width:700px){
+
+    .content,
+    .statistiken{
+
+        margin:20px;
+
+    }
+
+    .form-card,
+    .table-card{
+
+        padding:20px;
+
+    }
+
+    table{
+
+        display:block;
+
+        overflow-x:auto;
+
+        white-space:nowrap;
+
+    }
+
+}

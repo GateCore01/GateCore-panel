@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard</title>
-    <link rel="stylesheet" href="/css/panel.css">
+    <link rel="stylesheet" href="css/panel.css">
     <script src="/js/panel.js"></script>
 </head>
 <body>
@@ -32,9 +32,33 @@
     </div>
     <div class="statistiken">
         <h2>Statistiken</h2>
-    <div class="dashboard-card">
-        <h2>LXC Container</h2>
-            <span id="lxc-count">0</span>
+
+            <div class="dashboard-grid">
+
+            <div class="dashboard-card">
+                <h2>LXC Container</h2>
+                <span id="lxc-count">0</span>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Server</h2>
+                <span id="server-count">0</span>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>CPU</h2>
+                <span id="cpu-usage">0%</span>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>RAM</h2>
+                <span id="ram-usage">0%</span>
+            </div>
+
+            <div class="dashboard-card">
+                <h2>Speicher</h2>
+                <span id="storage-usage">0%</span>
+            </div>
         </div>
     </div>
 

@@ -32,6 +32,13 @@ class Server(BaseModel):
     username: str
     description: str | None = None
 
+class AddServer(BaseModel):
+
+    hostname: str
+    ip: str
+    username: str
+    password: str
+    port: int = 22
 
 # -------------------------------------------------
 # LXC
