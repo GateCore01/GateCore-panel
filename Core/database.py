@@ -13,6 +13,7 @@ DATABASE_DIR.mkdir(exist_ok=True)
 USERS_DB = DATABASE_DIR / "users.db"
 SERVER_DB = DATABASE_DIR / "server.db"
 LXC_DB = DATABASE_DIR / "lxc.db"
+DB_PATH_LOGS = BASE_DIR / "database" / "logs.db"
 
 # -------------------------------------------------
 # Verbindungen
@@ -167,3 +168,91 @@ def get_server(server_id: int):
     conn.close()
 
     return server
+
+# -------------------------------------------------
+# logs.db
+# -------------------------------------------------
+def logs_connection():
+
+    conn = sqlite3.connect(DB_PATH_LOGS)
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
+
+conn = logs_connection()
+
+conn.execute("""
+
+CREATE TABLE IF NOT EXISTS logs(
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    timestamp TEXT NOT NULL,
+
+    server TEXT,
+
+    username TEXT,
+
+    level TEXT,
+
+    action TEXT,
+
+    details TEXT
+
+)
+
+""")
+
+conn.commit()
+
+conn.close()
+
+from datetime import datetime
+
+def write_log(server, username, level, action, details):
+
+    conn = logs_connection()
+
+    conn.execute("""
+
+        INSERT INTO logs
+        (
+
+            timestamp,
+
+            server,
+
+            username,
+
+            level,
+
+            action,
+
+            details
+
+        )
+
+        VALUES
+
+        (?,?,?,?,?,?)
+
+    """,(
+
+        datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+
+        server,
+
+        username,
+
+        level,
+
+        action,
+
+        details
+
+    ))
+
+    conn.commit()
+
+    conn.close()

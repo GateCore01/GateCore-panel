@@ -23,6 +23,11 @@ class AddUser(BaseModel):
     username: str
     password: str
 
+class ChangePassword(BaseModel):
+
+    id: str
+
+    password: str
 
 # -------------------------------------------------
 # Server
@@ -87,4 +92,17 @@ class UpdateLXC(BaseModel):
     server: str
 
     vmid: int
+    
+# -------------------------------------------------
+# Logs
+# -------------------------------------------------
+class LogEntry(BaseModel):
+
+    server: str
+
+    level: str
+
+    action: str
+
+    details: str
     

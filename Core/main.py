@@ -5,7 +5,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from models import AddUser
 from models import ChangePassword
-from models import LXCAction
 from database import lxc_connection
 
 from database import user_connection
@@ -24,7 +23,7 @@ from database import (
     server_connection
 )
 
-from models import AddServer
+from models import AddServer, AddLXC
 
 from ssh.system import hostname
 
@@ -727,3 +726,4 @@ async def server_select(user=Depends(require_login)):
         for row in rows
 
     ]
+    
