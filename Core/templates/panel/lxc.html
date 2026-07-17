@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server</title>
-    <script src="/js/server.js"></script>
+    <script src="/js/lxc.js"></script>
     <link rel="stylesheet" href="/css/panel.css">
 </head>
 
@@ -32,15 +32,15 @@
 <div class="taskbar-oben">
 
     <div class="taskbar-oben-left">
-        <h1>Server</h1>
+        <h1>LXC</h1>
     </div>
 
     <div class="taskbar-oben-right">
 
         <button
-            onclick="window.location='/panel/server_add'">
+            onclick="window.location='/panel/lxc_add'">
 
-            + Server
+            + Container
 
         </button>
 
@@ -62,26 +62,33 @@
 
         <table id="serverTable">
 
-            <thead>
+        <thead>
 
-            <tr>
+        <tr>
 
-                <th>ID</th>
-                <th>Name</th>
-                <th>IP-Adresse</th>
-                <th>Port</th>
-                <th>Benutzer</th>
-                <th>Aktionen</th>
+            <th>ID</th>
 
-            </tr>
+            <th>Name</th>
 
-            </thead>
+            <th>Host</th>
 
-            <tbody id="serverBody">
+            <th>Status</th>
 
-            <!-- JavaScript -->
+            <th>IP-Adresse</th>
 
-            </tbody>
+            <th>CPU</th>
+
+            <th>RAM</th>
+
+            <th>Aktionen</th>
+
+        </tr>
+
+        </thead>
+
+        <tbody id="serverBody">
+
+        </tbody>
 
         </table>
 

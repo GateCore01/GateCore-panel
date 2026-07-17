@@ -1,46 +1,90 @@
-document
-.getElementById("serverForm")
-.addEventListener("submit", async function(e){
+const form = document.getElementById("serverForm");
+const statusBox = document.getElementById("status");
+const testButton = document.getElementById("testButton");
 
-    e.preventDefault();
+function setStatus(message, success = true) {
 
-    const data = {
+    statusBox.innerText = message;
 
-        hostname:
-            document.getElementById("hostname").value,
+    if (success) {
+        statusBox.className = "status-success";
+    } else {
+        statusBox.className = "status-error";
+    }
 
-        ip:
-            document.getElementById("ip").value,
+}
 
-        username:
-            document.getElementById("username").value,
+async function getFormData() {
 
-        password:
-            document.getElementById("password").value
+    return {
+
+        hostname: document.getElementById("hostname").value,
+
+        ip: document.getElementById("ip").value,
+
+        port: parseInt(document.getElementById("port").value),
+
+        username: document.getElementById("username").value,
+
+        password: document.getElementById("password").value
 
     };
 
-    const response = await fetch("/api/server/add",{
+}
 
-        method:"POST",
+testButton.addEventListener("click", async () => {
 
-        credentials:"include",
+    setStatus("Verbindung wird geprüft...", true);
 
-        headers:{
-            "Content-Type":"application/json"
+    const response = await fetch("/api/server/test", {
+
+        method: "POST",
+
+        credentials: "include",
+
+        headers: {
+            "Content-Type": "application/json"
         },
 
-        body:JSON.stringify(data)
+        body: JSON.stringify(await getFormData())
 
     });
 
     const result = await response.json();
 
-    alert(result.message);
+    setStatus(result.message, result.success);
 
-    if(result.success){
+});
 
-        window.location="/panel/server";
+form.addEventListener("submit", async (event) => {
+
+    event.preventDefault();
+
+    const response = await fetch("/api/server/add", {
+
+        method: "POST",
+
+        credentials: "include",
+
+        headers: {
+            "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify(await getFormData())
+
+    });
+
+    const result = await response.json();
+
+    setStatus(result.message, result.success);
+
+    if (result.success) {
+
+        setTimeout(() => {
+
+            window.location = "/panel/servers";
+
+        }, 1000);
 
     }
 

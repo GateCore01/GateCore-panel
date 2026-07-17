@@ -18,7 +18,7 @@ LXC_DB = DATABASE_DIR / "lxc.db"
 # Verbindungen
 # -------------------------------------------------
 
-def users_connection():
+def user_connection():
     conn = sqlite3.connect(USERS_DB)
     conn.row_factory = sqlite3.Row
     return conn
@@ -53,7 +53,7 @@ def init_database():
 
 def create_users_database():
 
-    conn = users_connection()
+    conn = user_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -128,27 +128,42 @@ def create_server_database():
 def create_lxc_database():
 
     conn = lxc_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS lxc (
+    conn.execute("""
 
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+    CREATE TABLE IF NOT EXISTS lxc (
 
-            server_id INTEGER,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
 
-            vmid INTEGER,
+        name TEXT NOT NULL,
 
-            name TEXT,
+        server TEXT NOT NULL,
 
-            status TEXT,
+        vmid INTEGER NOT NULL,
 
-            node TEXT,
+    )
 
-            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
-        )
     """)
 
     conn.commit()
+
     conn.close()
+    
+    
+# Abfrage für get-server
+def get_server(server_id: int):
+
+    conn = server_connection()
+
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT * FROM servers WHERE id=?",
+        (server_id,)
+    )
+
+    server = cursor.fetchone()
+
+    conn.close()
+
+    return server

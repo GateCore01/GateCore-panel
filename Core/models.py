@@ -19,6 +19,10 @@ class User(BaseModel):
     username: str
     role: str
 
+class AddUser(BaseModel):
+    username: str
+    password: str
+
 
 # -------------------------------------------------
 # Server
@@ -65,3 +69,22 @@ class Message(BaseModel):
 class CurrentUser(BaseModel):
     username: str
     role: str
+    
+class AddLXC(BaseModel):
+
+    name: str
+
+    server: str
+
+    vmid: int
+    
+class UpdateLXC(BaseModel):
+
+    id: int
+
+    name: str
+
+    server: str
+
+    vmid: int
+    
