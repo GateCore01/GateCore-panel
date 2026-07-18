@@ -106,3 +106,75 @@ class LogEntry(BaseModel):
 
     details: str
     
+
+# -------------------------------------------------
+# Storage
+# -------------------------------------------------
+
+class CreateStorage(BaseModel):
+
+    name: str
+    server: int
+    pool: str
+    filesystem: str
+    raid: str
+    mountpoint: str
+
+
+class UpdateStorage(BaseModel):
+
+    name: str
+    new_name: str
+
+    filesystem: str
+    raid: str
+    mountpoint: str
+
+
+# -------------------------------------------------
+# Allgemeine Aktionen
+# -------------------------------------------------
+
+class StorageAction(BaseModel):
+
+    pool: str
+
+
+class StorageSmartTest(BaseModel):
+
+    disk: str
+    type: str
+
+
+# -------------------------------------------------
+# Snapshots
+# -------------------------------------------------
+
+class SnapshotCreate(BaseModel):
+
+    pool: str
+    dataset: str
+    name: str
+
+
+class SnapshotRename(BaseModel):
+
+    pool: str
+    old_name: str
+    new_name: str
+
+
+class SnapshotClone(BaseModel):
+
+    pool: str
+    snapshot: str
+    clone: str
+
+
+# -------------------------------------------------
+# Scrub
+# -------------------------------------------------
+
+class ScrubAction(BaseModel):
+
+    pool: str

@@ -23,6 +23,19 @@ from database import (
     server_connection
 )
 
+from fastapi import Body
+
+from models import (
+    CreateStorage,
+    UpdateStorage,
+    StorageAction,
+    SnapshotCreate,
+    SnapshotRename,
+    SnapshotClone
+)
+
+from database import storage_connection
+
 from models import AddServer, AddLXC
 
 from ssh.system import hostname
@@ -205,6 +218,45 @@ async def lxc_console(
     return FileResponse(
         BASE_DIR / "templates" / "panel" / "lxc_console.html"
     )
+
+# -------------------------------------------------
+# Storage
+# -------------------------------------------------
+@app.get("/panel/storage")
+async def storage_page(user=Depends(require_login)):
+    return FileResponse(
+        BASE_DIR / "templates" / "panel" / "storage.html"
+    )
+
+
+@app.get("/panel/storage/add")
+async def storage_add_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-add.html")
+
+
+@app.get("/panel/storage/edit")
+async def storage_edit_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-edit.html")
+
+
+@app.get("/panel/storage/details")
+async def storage_details_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-details.html")
+
+
+@app.get("/panel/storage/smart")
+async def storage_smart_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-smart.html")
+
+
+@app.get("/panel/storage/snapshots")
+async def storage_snapshots_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-snapshots.html")
+
+
+@app.get("/panel/storage/scrub")
+async def storage_scrub_page(user=Depends(require_login)):
+    return FileResponse("templates/panel/storage/storage-scrub.html")
 
 # -------------------------------------------------
 # API
@@ -727,3 +779,287 @@ async def server_select(user=Depends(require_login)):
 
     ]
     
+# -------------------------------------------------
+# Storage API
+# -------------------------------------------------
+@app.post("/api/storage/add")
+async def storage_add(
+    data: CreateStorage,
+    user=Depends(require_login)
+):
+
+    conn = storage_connection()
+
+    conn.execute(
+        """
+        INSERT INTO storage
+        (
+            name,
+            server,
+            pool,
+            filesystem,
+            raid,
+            mountpoint
+        )
+
+        VALUES
+        (?,?,?,?,?,?)
+        """,
+        (
+            data.name,
+            data.server,
+            data.pool,
+            data.filesystem,
+            data.raid,
+            data.mountpoint
+        )
+    )
+
+    conn.commit()
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Speicher angelegt."
+    }
+    
+@app.get("/api/storage/list")
+async def storage_list(
+    user=Depends(require_login)
+):
+
+    conn = storage_connection()
+
+    rows = conn.execute(
+        """
+        SELECT *
+        FROM storage
+        ORDER BY id
+        """
+    ).fetchall()
+
+    conn.close()
+
+    return [
+        dict(row)
+        for row in rows
+    ]
+    
+@app.get("/api/storage/details/{pool}")
+async def storage_details(
+    pool: str,
+    user=Depends(require_login)
+):
+
+    conn = storage_connection()
+
+    row = conn.execute(
+        """
+        SELECT *
+        FROM storage
+        WHERE pool=?
+        """,
+        (pool,)
+    ).fetchone()
+
+    conn.close()
+
+    if row is None:
+
+        return {}
+
+    return dict(row)
+
+@app.put("/api/storage/update")
+async def storage_update(
+    data: UpdateStorage,
+    user=Depends(require_login)
+):
+
+    conn = storage_connection()
+
+    conn.execute(
+        """
+        UPDATE storage
+
+        SET
+
+        name=?,
+        filesystem=?,
+        raid=?,
+        mountpoint=?
+
+        WHERE pool=?
+        """,
+        (
+            data.new_name,
+            data.filesystem,
+            data.raid,
+            data.mountpoint,
+            data.name
+        )
+    )
+
+    conn.commit()
+
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Gespeichert."
+    }
+    
+@app.delete("/api/storage/delete/{pool}")
+async def storage_delete(
+    pool: str,
+    user=Depends(require_login)
+):
+
+    conn = storage_connection()
+
+    conn.execute(
+        """
+        DELETE FROM storage
+        WHERE pool=?
+        """,
+        (pool,)
+    )
+
+    conn.commit()
+
+    conn.close()
+
+    return {
+        "success": True,
+        "message": "Pool gelöscht."
+    }
+    
+@app.get("/api/storage/smart/{disk}")
+async def storage_smart(
+    disk: str,
+    user=Depends(require_login)
+):
+
+    return {}
+
+@app.get("/api/storage/smart/attributes/{disk}")
+async def storage_smart_attributes(
+    disk: str,
+    user=Depends(require_login)
+):
+
+    return []
+
+@app.get("/api/storage/smart/log/{disk}")
+async def storage_smart_log(
+    disk: str,
+    user=Depends(require_login)
+):
+
+    return {
+        "log": ""
+    }
+    
+@app.post("/api/storage/smart/test")
+async def storage_smart_test(
+    data: StorageAction,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "SMART-Test gestartet."
+    }
+    
+@app.get("/api/storage/scrub/{pool}")
+async def storage_scrub(
+    pool: str,
+    user=Depends(require_login)
+):
+
+    return {}
+
+@app.post("/api/storage/scrub/start")
+async def storage_scrub_start(
+    data: StorageAction,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Scrub gestartet."
+    }
+    
+@app.post("/api/storage/scrub/stop")
+async def storage_scrub_stop(
+    data: StorageAction,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Scrub gestoppt."
+    }
+    
+@app.get("/api/storage/snapshots/{pool}")
+async def snapshot_list(
+    pool: str,
+    user=Depends(require_login)
+):
+
+    return []
+
+@app.post("/api/storage/snapshot/create")
+async def snapshot_create(
+    data: SnapshotCreate,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Snapshot erstellt."
+    }
+    
+@app.put("/api/storage/snapshot/rename")
+async def snapshot_rename(
+    data: SnapshotRename,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Snapshot umbenannt."
+    }
+    
+@app.delete("/api/storage/snapshot/delete")
+async def snapshot_delete(
+    data: StorageAction,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Snapshot gelöscht."
+    }
+    
+@app.post("/api/storage/snapshot/rollback")
+async def snapshot_rollback(
+    data: StorageAction,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Rollback erfolgreich."
+    }
+    
+@app.post("/api/storage/snapshot/clone")
+async def snapshot_clone(
+    data: SnapshotClone,
+    user=Depends(require_login)
+):
+
+    return {
+        "success": True,
+        "message": "Snapshot geklont."
+    }

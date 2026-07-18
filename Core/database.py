@@ -14,6 +14,7 @@ USERS_DB = DATABASE_DIR / "users.db"
 SERVER_DB = DATABASE_DIR / "server.db"
 LXC_DB = DATABASE_DIR / "lxc.db"
 DB_PATH_LOGS = BASE_DIR / "database" / "logs.db"
+DB_PATH_STORAGE = BASE_DIR / "database" / "storage.db"
 
 # -------------------------------------------------
 # Verbindungen
@@ -36,6 +37,13 @@ def lxc_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def storage_connection():
+
+    conn = sqlite3.connect(DB_PATH_STORAGE)
+
+    conn.row_factory = sqlite3.Row
+
+    return conn
 
 # -------------------------------------------------
 # Datenbank erstellen
@@ -46,7 +54,6 @@ def init_database():
     create_users_database()
     create_server_database()
     create_lxc_database()
-
 
 # -------------------------------------------------
 # users.db
@@ -256,3 +263,115 @@ def write_log(server, username, level, action, details):
     conn.commit()
 
     conn.close()
+    
+# -------------------------------------------------
+# storage.db
+# -------------------------------------------------
+conn = storage_connection()
+
+conn.execute("""
+CREATE TABLE IF NOT EXISTS storage(
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    name TEXT NOT NULL,
+
+    server INTEGER NOT NULL,
+
+    pool TEXT UNIQUE NOT NULL,
+
+    filesystem TEXT,
+
+    raid TEXT,
+
+    mountpoint TEXT
+
+)
+""")
+
+conn.commit()
+
+conn.close()
+
+# -------------------------------------------------
+# Snapshots
+# -------------------------------------------------
+conn = storage_connection()
+
+conn.execute("""
+CREATE TABLE IF NOT EXISTS snapshots(
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    pool TEXT,
+
+    dataset TEXT,
+
+    snapshot TEXT,
+
+    created TEXT,
+
+    used TEXT,
+
+    referenced TEXT
+
+)
+""")
+
+conn.commit()
+
+conn.close()
+
+# -------------------------------------------------
+# SMART History
+# -------------------------------------------------
+conn = storage_connection()
+
+conn.execute("""
+CREATE TABLE IF NOT EXISTS smart_history(
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    disk TEXT,
+
+    temperature INTEGER,
+
+    health TEXT,
+
+    created TEXT
+
+)
+""")
+
+conn.commit()
+
+conn.close()
+
+# -------------------------------------------------
+# Scrub History
+# -------------------------------------------------
+conn = storage_connection()
+
+conn.execute("""
+CREATE TABLE IF NOT EXISTS scrub_history(
+
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+    pool TEXT,
+
+    started TEXT,
+
+    finished TEXT,
+
+    duration TEXT,
+
+    errors INTEGER,
+
+    result TEXT
+
+)
+""")
+
+conn.commit()
+
+conn.close()
