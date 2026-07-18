@@ -6,7 +6,7 @@ class SSHClient:
     def __init__(self, server):
 
         self.server = server
-        self.client = None
+        self.client: paramiko.SSHClient | None = None
 
     def connect(self):
 
@@ -26,6 +26,9 @@ class SSHClient:
 
     def execute(self, command):
 
+        if self.client is None:
+            raise RuntimeError("SSH-Verbindung wurde noch nicht aufgebaut.")
+
         stdin, stdout, stderr = self.client.exec_command(command)
 
         return {
@@ -35,5 +38,6 @@ class SSHClient:
 
     def close(self):
 
-        if self.client:
+        if self.client is not None:
             self.client.close()
+            self.client = None

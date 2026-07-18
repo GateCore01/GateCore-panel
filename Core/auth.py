@@ -12,7 +12,7 @@ from http.cookies import SimpleCookie
 from fastapi import FastAPI, Request, Response, Depends, HTTPException, status
 import bcrypt
 
-from database import users_connection
+from database import user_connection
 
 # --- Konfiguration ---
 # Pfad zur Datenbank (relativ zum Projektroot)
@@ -124,7 +124,7 @@ def create_session(username: str, token: str) -> bool:
     Returns:
         True wenn erfolgreich, False sonst.
     """
-    conn = users_connection()
+    conn = user_connection()
     try:
         # Prüfen ob Token existiert (Race Condition vermeiden)
         existing = fetch_one(conn, "SELECT * FROM sessions WHERE token = ?", (token,))
@@ -155,7 +155,7 @@ def delete_session(token: str) -> bool:
     Returns:
         True wenn gelöscht, False wenn nicht gefunden.
     """
-    conn = users_connection()
+    conn = user_connection()
     try:
         cursor = conn.execute("DELETE FROM sessions WHERE token = ?", (token,))
         deleted_count = cursor.rowcount
@@ -171,7 +171,7 @@ def cleanup_sessions() -> int:
     Returns:
         Anzahl der gelöschten Einträge.
     """
-    conn = users_connection()
+    conn = user_connection()
     try:
         # Abfrage für abgelaufene Sessions
         now = int(time.time())
@@ -199,7 +199,7 @@ def create_user(username: str, password: str, role: str) -> bool:
     Returns:
         True wenn erfolgreich, False bei Duplikat.
     """
-    conn = users_connection()
+    conn = user_connection()
     try:
         # Passwort hashen
         hashed_pw = hash_password(password)
@@ -233,7 +233,7 @@ def get_current_user(token: str) -> Optional[CurrentUser]:
     Returns:
         CurrentUser Objekt oder None.
     """
-    conn = users_connection()
+    conn = user_connection()
     try:
         # Session prüfen
         session = fetch_one(conn, "SELECT * FROM sessions WHERE token = ?", (token,))
@@ -266,7 +266,7 @@ def login(app: FastAPI) -> None:
     @app.post("/api/login", response_model=Dict[str, Any])
     async def api_login(request_data: LoginData):
         # Datenbank Verbindung
-        conn = users_connection()
+        conn = user_connection()
         try:
             # Benutzer suchen
             user = fetch_one(conn, "SELECT * FROM users WHERE username = ?", (request_data.username,))
@@ -294,8 +294,6 @@ def login(app: FastAPI) -> None:
         finally:
             conn.close()
 
-    return api_login
-
 def logout(app: FastAPI) -> None:
     """
     Endpoint für das Logout.
@@ -320,8 +318,6 @@ def logout(app: FastAPI) -> None:
 
         return response
 
-    return api_logout
-
 def get_user_info(app: FastAPI) -> None:
     """
     Endpoint für Benutzerinformationen.
@@ -345,8 +341,6 @@ def get_user_info(app: FastAPI) -> None:
         
         return current_user
 
-    return api_get_user
-
 def require_login(request: Request):
 
     token = request.cookies.get(SESSION_COOKIE_NAME)
@@ -361,8 +355,6 @@ def require_login(request: Request):
 
     return current_user
     
-    return user_dependency
-
 # --- FastAPI Cookie-Hilfen ---
 
 def set_cookie(response: Response, token: str) -> None:
