@@ -4,14 +4,10 @@ import sqlite3
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from datetime import datetime
-
 from fastapi.responses import JSONResponse
-
 from http.cookies import SimpleCookie
-
 from fastapi import FastAPI, Request, Response, Depends, HTTPException, status
 import bcrypt
-
 from database import user_connection
 
 # --- Konfiguration ---
@@ -33,6 +29,7 @@ from models import (
 
 # --- Passwort-Management ---
 
+# --- HASHEN ---
 def hash_password(password: str) -> str:
     """
     Hashen eines Passworts mit bcrypt.
@@ -48,6 +45,7 @@ def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
     return hashed.decode('utf-8')
 
+# --- Passwort-Überprüfung ---
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Prüfen ob ein Passwort zu einem Hash passt.
@@ -63,6 +61,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 # --- Datenbank-Hilfsfunktionen ---
 
+# --- Datenbankverbindung ---
 def get_db_connection(db_path: Path) -> sqlite3.Connection:
     """
     Erzeugt eine Verbindung zur SQLite-Datenbank.
@@ -77,6 +76,7 @@ def get_db_connection(db_path: Path) -> sqlite3.Connection:
     conn.row_factory = sqlite3.Row  # Ermöglicht row['column'] Zugriff
     return conn
 
+# --- SQL-Abfrage ausführen ---
 def execute_query(conn: sqlite3.Connection, query: str, params: tuple = ()) -> sqlite3.Cursor:
     """
     Führt eine SQL-Abfrage aus.
@@ -92,6 +92,7 @@ def execute_query(conn: sqlite3.Connection, query: str, params: tuple = ()) -> s
     cursor = conn.execute(query, params)
     return cursor
 
+# --- Eine Zeile aus der Datenbank abrufen ---
 def fetch_one(conn: sqlite3.Connection, query: str, params: tuple = ()) -> Optional[sqlite3.Row]:
     """
     Führt eine Abfrage aus und gibt die erste Zeile zurück.
@@ -113,6 +114,7 @@ def fetch_all(conn: sqlite3.Connection, query: str, params: tuple = ()) -> List[
 
 # --- Session-Management ---
 
+# --- Session erstellen ---
 def create_session(username: str, token: str) -> bool:
     """
     Erstellt eine neue Session in der sessions.db.
@@ -145,6 +147,7 @@ def create_session(username: str, token: str) -> bool:
     finally:
         conn.close()
 
+# --- Session löschen ---
 def delete_session(token: str) -> bool:
     """
     Löscht eine Session basierend auf dem Token.
@@ -164,6 +167,7 @@ def delete_session(token: str) -> bool:
     finally:
         conn.close()
 
+# --- Session Cleanup ---
 def cleanup_sessions() -> int:
     """
     Entfernt alle abgelaufenen Sessions aus der Datenbank.
@@ -187,6 +191,7 @@ def cleanup_sessions() -> int:
 
 # --- Benutzer-Management ---
 
+# --- Benutzer erstellen ---
 def create_user(username: str, password: str, role: str) -> bool:
     """
     Erstellt einen neuen Benutzer in users.db.
@@ -223,6 +228,47 @@ def create_user(username: str, password: str, role: str) -> bool:
     finally:
         conn.close()
 
+
+# --- Benutzerinformationen ---
+def get_user_info(app: FastAPI) -> None:
+    """
+    Endpoint für Benutzerinformationen.
+    
+    GET /api/user
+    """
+    @app.get("/api/user", response_model=CurrentUser)
+    async def api_get_user(request: Request):
+        # Cookie lesen
+        cookies = request.cookies
+        token = cookies.get(SESSION_COOKIE_NAME)
+        
+        if not token:
+            raise HTTPException(status_code=401, detail="Session Token fehlt")
+        
+        # User laden
+        current_user = get_current_user(token)
+        
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Session ungültig oder abgelaufen")
+        
+        return current_user
+
+# --- Login-Required Dependency ---
+def require_login(request: Request):
+
+    token = request.cookies.get(SESSION_COOKIE_NAME)
+
+    if not token:
+        raise HTTPException(status_code=401)
+
+    current_user = get_current_user(token)
+
+    if current_user is None:
+        raise HTTPException(status_code=401)
+
+    return current_user
+
+# --- Session-Validierung ---
 def get_current_user(token: str) -> Optional[CurrentUser]:
     """
     Validiert ein Session-Token und gibt den Benutzer zurück.
@@ -255,8 +301,7 @@ def get_current_user(token: str) -> Optional[CurrentUser]:
     finally:
         conn.close()
 
-# --- API Endpoints ---
-
+# --- Login Endpoint ---
 def login(app: FastAPI) -> None:
     """
     Endpoint für das Login.
@@ -294,6 +339,7 @@ def login(app: FastAPI) -> None:
         finally:
             conn.close()
 
+# --- Logout Endpoint ---
 def logout(app: FastAPI) -> None:
     """
     Endpoint für das Logout.
@@ -318,43 +364,6 @@ def logout(app: FastAPI) -> None:
 
         return response
 
-def get_user_info(app: FastAPI) -> None:
-    """
-    Endpoint für Benutzerinformationen.
-    
-    GET /api/user
-    """
-    @app.get("/api/user", response_model=CurrentUser)
-    async def api_get_user(request: Request):
-        # Cookie lesen
-        cookies = request.cookies
-        token = cookies.get(SESSION_COOKIE_NAME)
-        
-        if not token:
-            raise HTTPException(status_code=401, detail="Session Token fehlt")
-        
-        # User laden
-        current_user = get_current_user(token)
-        
-        if not current_user:
-            raise HTTPException(status_code=401, detail="Session ungültig oder abgelaufen")
-        
-        return current_user
-
-def require_login(request: Request):
-
-    token = request.cookies.get(SESSION_COOKIE_NAME)
-
-    if not token:
-        raise HTTPException(status_code=401)
-
-    current_user = get_current_user(token)
-
-    if current_user is None:
-        raise HTTPException(status_code=401)
-
-    return current_user
-    
 # --- FastAPI Cookie-Hilfen ---
 
 def set_cookie(response: Response, token: str) -> None:
