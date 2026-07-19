@@ -32,36 +32,84 @@
         </div>
     </div>
     <div class="statistiken">
-        <h2>Statistiken</h2>
+        <div class="dashboard-hero">
+            <div>
+                <p class="eyebrow">GateCore Übersicht</p>
+                <h2>Willkommen zurück, <span id="dashboard-user">Admin</span></h2>
+                <p class="dashboard-subtitle">Verwalte Container, Server und Speicher zentral aus einer Oberfläche.</p>
+            </div>
+            <div class="dashboard-hero-actions">
+                <button type="button" id="refreshDashboardButton" class="secondary-button">Aktualisieren</button>
+                <a href="/panel/lxc" class="secondary-button">Container öffnen</a>
+                <a href="/panel/servers" class="secondary-button">Server prüfen</a>
+            </div>
+        </div>
 
-            <div class="dashboard-grid">
-
-            <div class="dashboard-card">
+        <div class="dashboard-grid">
+            <a class="dashboard-card" href="/panel/lxc">
                 <h2>LXC Container</h2>
                 <span id="lxc-count">0</span>
-            </div>
+                <p class="dashboard-meta" id="lxc-status-meta">0 aktiv</p>
+            </a>
 
-            <div class="dashboard-card">
+            <a class="dashboard-card" href="/panel/servers">
                 <h2>Server</h2>
                 <span id="server-count">0</span>
-            </div>
+                <p class="dashboard-meta">verbunden</p>
+            </a>
 
-            <div class="dashboard-card">
+            <a class="dashboard-card" href="/panel/users">
+                <h2>Benutzer</h2>
+                <span id="users-count">0</span>
+                <p class="dashboard-meta">registriert</p>
+            </a>
+
+            <a class="dashboard-card" href="/panel/storage">
+                <h2>Speicher-Pools</h2>
+                <span id="storage-count">0</span>
+                <p class="dashboard-meta">in der Verwaltung</p>
+            </a>
+
+            <a class="dashboard-card" href="/panel/lxc">
                 <h2>CPU</h2>
                 <span id="cpu-usage">0%</span>
-            </div>
+                <p class="dashboard-meta">Durchschnitt</p>
+            </a>
 
-            <div class="dashboard-card">
+            <a class="dashboard-card" href="/panel/lxc">
                 <h2>RAM</h2>
                 <span id="ram-usage">0%</span>
-            </div>
+                <p class="dashboard-meta">Durchschnitt</p>
+            </a>
+        </div>
 
-            <div class="dashboard-card">
-                <h2>Speicher</h2>
-                <span id="storage-usage">0%</span>
-            </div>
+        <div class="dashboard-panel-grid">
+            <section class="panel-card">
+                <div class="panel-card-header">
+                    <h3>Container-Status</h3>
+                    <span class="panel-tag" id="updated-time">-</span>
+                </div>
+                <div id="lxc-status-list" class="status-list"></div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-card-header">
+                    <h3>Serverübersicht</h3>
+                    <span class="panel-tag">Live</span>
+                </div>
+                <div id="server-list" class="mini-list"></div>
+            </section>
+
+            <section class="panel-card">
+                <div class="panel-card-header">
+                    <h3>Speicher-Pools</h3>
+                    <span class="panel-tag">Verfügbar</span>
+                </div>
+                <div id="storage-list" class="mini-list"></div>
+            </section>
         </div>
     </div>
 
 </body>
 </html>
+s

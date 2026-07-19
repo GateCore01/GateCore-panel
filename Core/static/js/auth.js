@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
     try {
-        const response = await fetch("/api/auth/check", {
+        const response = await fetch("/api/user", {
             method: "GET",
             credentials: "include"
         });
