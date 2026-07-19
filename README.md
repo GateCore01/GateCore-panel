@@ -167,7 +167,29 @@ Beim Start der Anwendung werden die relevanten Tabellen automatisch erstellt, so
 
 ## Installation
 
-Um den Master/Panel zu installieren wird über
+## Pflicht für install scripts ist Curl bitte installieren sie Curl für ihr System
+
+### Debian/Ubuntu
+```bash
+apt update
+apt install curl -y
+```
+
+### Rocky Linux/ Centos/ Redhat
+```bash
+dnf update -y
+dnf install curl -y
+```
+
+### OpenSUSE 
+```bash
+zypper refresh
+zypper install curl -y
+``` 
+
+## Installation der Software
+
+### Um den Master/Panel zu installieren führen sie diesen Behfehl aus:
 ```bash
 curl https://github.com/GateCore01/GateCore-panel/blob/main/install-master.sh | bash
 ```
@@ -176,6 +198,11 @@ Nach dem Start ist die App unter folgendem Pfad erreichbar:
 
 ```ip
 http://localhost:8000
+```
+
+### Um den Hypervisor zu installieren führen sie diesen Behfehl aus:
+```bash
+curl https://github.com/GateCore01/GateCore-panel/blob/main/install-hypervisor.sh | bash
 ```
 
 ## Erster Zugriff
