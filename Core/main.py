@@ -239,14 +239,14 @@ app.mount(
 @app.get("/")
 async def login_page():
     return FileResponse(
-        BASE_DIR / "templates" / "login.html"
+        BASE_DIR / "templates" / "index.html"
     )
 
 
 @app.get("/login")
 async def login_page_alias():
     return FileResponse(
-        BASE_DIR / "templates" / "login.html"
+        BASE_DIR / "templates" / "index.html"
     )
 
 # -------------------------------------------------

@@ -78,6 +78,15 @@ case "$OS" in
         ;;
 esac
 
+# Create a dedicated user for the GateCore panel
+useradd -r -s /bin/false gatecore
+
+# Clone the GateCore panel repository
+git clone https://github.com/GateCore01/GateCore-panel /tmp/gatecore/
+
+# Move the cloned repository to the installation directory
+mv /tmp/gatecore/Core/* /opt/gatecore/panel/
+
 # Create necessary directories
 mkdir -p /opt/gatecore/panel
 mkdir -p /tmp/gatecore
@@ -110,15 +119,6 @@ case "$OS" in
         pip install fastapi uvicorn jinja2 paramiko python-multipart passlib bcrypt aiofiles python-dotenv psutil requests pydantic sqlalchemy
         ;;
 esac
-
-# Create a dedicated user for the GateCore panel
-useradd -r -s /bin/false gatecore
-
-# Clone the GateCore panel repository
-git clone https://github.com/GateCore01/GateCore-panel /tmp/gatecore/
-
-# Move the cloned repository to the installation directory
-mv /tmp/gatecore/Core* /opt/gatecore/panel/
 
 # Set permissions for the installation directory
 chown -R gatecore:gatecore /opt/gatecore/panel/
