@@ -114,6 +114,8 @@ async function testServer(id) {
 
     const response = await fetch(`/api/server/test/${id}`, {
 
+        method: "POST",
+
         credentials: "include"
 
     });

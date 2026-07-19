@@ -1,4 +1,17 @@
-from ssh.client import SSHClient
+from typing import Any
+
+from ssh.commands import run
+
+
+def _run_text(server: dict[str, Any], command: str) -> str:
+    """Führt einen SSH-Befehl aus und liefert stdout oder stderr als Text."""
+    result = run(server, command)
+    return result.get("stdout") or result.get("stderr", "")
+
+
+def _run_action(server: dict[str, Any], command: str) -> dict[str, str]:
+    """Führt einen SSH-Befehl aus und gibt das Ergebnis-Objekt zurück."""
+    return run(server, command)
 
 
 # -------------------------------------------------
@@ -6,18 +19,7 @@ from ssh.client import SSHClient
 # -------------------------------------------------
 
 def list_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-units --type=service --all --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-units --type=service --all --no-pager")
 
 
 # -------------------------------------------------
@@ -25,18 +27,7 @@ def list_services(server):
 # -------------------------------------------------
 
 def list_unit_files(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-unit-files --type=service --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-unit-files --type=service --no-pager")
 
 
 # -------------------------------------------------
@@ -44,18 +35,7 @@ def list_unit_files(server):
 # -------------------------------------------------
 
 def status(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl status {service} --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"systemctl status {service} --no-pager")
 
 
 # -------------------------------------------------
@@ -63,18 +43,7 @@ def status(server, service):
 # -------------------------------------------------
 
 def start(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl start {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl start {service}")
 
 
 # -------------------------------------------------
@@ -82,18 +51,7 @@ def start(server, service):
 # -------------------------------------------------
 
 def stop(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl stop {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl stop {service}")
 
 
 # -------------------------------------------------
@@ -101,18 +59,7 @@ def stop(server, service):
 # -------------------------------------------------
 
 def restart(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl restart {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl restart {service}")
 
 
 # -------------------------------------------------
@@ -120,18 +67,7 @@ def restart(server, service):
 # -------------------------------------------------
 
 def reload(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl reload {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl reload {service}")
 
 
 # -------------------------------------------------
@@ -139,18 +75,7 @@ def reload(server, service):
 # -------------------------------------------------
 
 def reload_or_restart(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl reload-or-restart {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl reload-or-restart {service}")
 
 
 # -------------------------------------------------
@@ -158,18 +83,8 @@ def reload_or_restart(server, service):
 # -------------------------------------------------
 
 def is_active(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl is-active {service}"
-    )
-
-    ssh.close()
-
-    return result["stdout"] == "active"
+    result = _run_action(server, f"systemctl is-active {service}")
+    return result.get("stdout", "").strip() == "active"
 
 
 # -------------------------------------------------
@@ -177,18 +92,8 @@ def is_active(server, service):
 # -------------------------------------------------
 
 def is_enabled(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl is-enabled {service}"
-    )
-
-    ssh.close()
-
-    return result["stdout"] == "enabled"
+    result = _run_action(server, f"systemctl is-enabled {service}")
+    return result.get("stdout", "").strip() == "enabled"
 
 
 # -------------------------------------------------
@@ -196,7 +101,6 @@ def is_enabled(server, service):
 # -------------------------------------------------
 
 def is_running(server, service):
-
     return is_active(server, service)
 
 
@@ -205,18 +109,7 @@ def is_running(server, service):
 # -------------------------------------------------
 
 def active_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-units --type=service --state=running --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-units --type=service --state=running --no-pager")
 
 
 # -------------------------------------------------
@@ -224,18 +117,7 @@ def active_services(server):
 # -------------------------------------------------
 
 def inactive_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-units --type=service --state=inactive --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-units --type=service --state=inactive --no-pager")
 
 
 # -------------------------------------------------
@@ -243,18 +125,7 @@ def inactive_services(server):
 # -------------------------------------------------
 
 def description(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} --property=Description"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"systemctl show {service} --property=Description")
 
 
 # -------------------------------------------------
@@ -262,18 +133,7 @@ def description(server, service):
 # -------------------------------------------------
 
 def service_type(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} --property=Type"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"systemctl show {service} --property=Type")
 
 
 # -------------------------------------------------
@@ -281,36 +141,15 @@ def service_type(server, service):
 # -------------------------------------------------
 
 def service_file(server, service):
+    return _run_text(server, f"systemctl show {service} --property=FragmentPath")
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} --property=FragmentPath"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
 
 # -------------------------------------------------
 # Service aktivieren
 # -------------------------------------------------
 
 def enable(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl enable {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl enable {service}")
 
 
 # -------------------------------------------------
@@ -318,18 +157,7 @@ def enable(server, service):
 # -------------------------------------------------
 
 def disable(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl disable {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl disable {service}")
 
 
 # -------------------------------------------------
@@ -337,18 +165,7 @@ def disable(server, service):
 # -------------------------------------------------
 
 def mask(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl mask {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl mask {service}")
 
 
 # -------------------------------------------------
@@ -356,18 +173,7 @@ def mask(server, service):
 # -------------------------------------------------
 
 def unmask(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl unmask {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl unmask {service}")
 
 
 # -------------------------------------------------
@@ -375,18 +181,7 @@ def unmask(server, service):
 # -------------------------------------------------
 
 def daemon_reload(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "sudo systemctl daemon-reload"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, "sudo systemctl daemon-reload")
 
 
 # -------------------------------------------------
@@ -394,18 +189,7 @@ def daemon_reload(server):
 # -------------------------------------------------
 
 def daemon_reexec(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "sudo systemctl daemon-reexec"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, "sudo systemctl daemon-reexec")
 
 
 # -------------------------------------------------
@@ -413,18 +197,7 @@ def daemon_reexec(server):
 # -------------------------------------------------
 
 def failed_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl --failed --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl --failed --no-pager")
 
 
 # -------------------------------------------------
@@ -432,18 +205,7 @@ def failed_services(server):
 # -------------------------------------------------
 
 def running_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-units --type=service --state=running --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-units --type=service --state=running --no-pager")
 
 
 # -------------------------------------------------
@@ -451,18 +213,8 @@ def running_services(server):
 # -------------------------------------------------
 
 def service_exists(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl list-unit-files | grep '^{service}'"
-    )
-
-    ssh.close()
-
-    return result["stdout"] != ""
+    result = _run_action(server, f"systemctl list-unit-files | grep '^{service}'")
+    return result.get("stdout", "") != ""
 
 
 # -------------------------------------------------
@@ -470,18 +222,7 @@ def service_exists(server, service):
 # -------------------------------------------------
 
 def enabled_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-unit-files --state=enabled --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-unit-files --state=enabled --no-pager")
 
 
 # -------------------------------------------------
@@ -489,18 +230,7 @@ def enabled_services(server):
 # -------------------------------------------------
 
 def disabled_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-unit-files --state=disabled --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-unit-files --state=disabled --no-pager")
 
 
 # -------------------------------------------------
@@ -508,18 +238,7 @@ def disabled_services(server):
 # -------------------------------------------------
 
 def masked_services(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemctl list-unit-files --state=masked --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, "systemctl list-unit-files --state=masked --no-pager")
 
 
 # -------------------------------------------------
@@ -527,18 +246,7 @@ def masked_services(server):
 # -------------------------------------------------
 
 def enable_and_start(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl enable --now {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl enable --now {service}")
 
 
 # -------------------------------------------------
@@ -546,18 +254,7 @@ def enable_and_start(server, service):
 # -------------------------------------------------
 
 def disable_and_stop(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sudo systemctl disable --now {service}"
-    )
-
-    ssh.close()
-
-    return result
+    return _run_action(server, f"sudo systemctl disable --now {service}")
 
 
 # -------------------------------------------------
@@ -565,18 +262,7 @@ def disable_and_stop(server, service):
 # -------------------------------------------------
 
 def cat(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl cat {service}"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"systemctl cat {service}")
 
 
 # -------------------------------------------------
@@ -584,18 +270,7 @@ def cat(server, service):
 # -------------------------------------------------
 
 def properties(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service}"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"systemctl show {service}")
 
 
 # -------------------------------------------------
@@ -603,18 +278,8 @@ def properties(server, service):
 # -------------------------------------------------
 
 def is_loaded(server, service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} --property=LoadState"
-    )
-
-    ssh.close()
-
-    return "loaded" in result["stdout"]
+    result = _run_action(server, f"systemctl show {service} --property=LoadState")
+    return "loaded" in result.get("stdout", "")
 
 
 # -------------------------------------------------
@@ -622,365 +287,154 @@ def is_loaded(server, service):
 # -------------------------------------------------
 
 def boot_time(server):
+    return _run_text(server, "systemd-analyze")
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "systemd-analyze"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
 
 # -------------------------------------------------
 # Journal eines Services
 # -------------------------------------------------
 
-def logs(server,
-         service,
-         lines=100):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        f"-n {lines} --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def logs(server, service, lines=100):
+    return _run_text(server, f"journalctl -u {service} -n {lines} --no-pager")
 
 
 # -------------------------------------------------
 # Logs verfolgen
 # -------------------------------------------------
 
-def logs_follow(server,
-                service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} -f"
-    )
-
-    ssh.close()
-
-    return result
+def logs_follow(server, service):
+    return _run_action(server, f"journalctl -u {service} -f")
 
 
 # -------------------------------------------------
 # Logs seit Zeitpunkt
 # -------------------------------------------------
 
-def logs_since(server,
-               service,
-               since):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        f'--since "{since}" '
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def logs_since(server, service, since):
+    return _run_text(server, f"journalctl -u {service} --since \"{since}\" --no-pager")
 
 
 # -------------------------------------------------
 # Logs bis Zeitpunkt
 # -------------------------------------------------
 
-def logs_until(server,
-               service,
-               until):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        f'--until "{until}" '
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def logs_until(server, service, until):
+    return _run_text(server, f"journalctl -u {service} --until \"{until}\" --no-pager")
 
 
 # -------------------------------------------------
 # Letzter Boot
 # -------------------------------------------------
 
-def last_boot_logs(server,
-                   service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        "-b --no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def last_boot_logs(server, service):
+    return _run_text(server, f"journalctl -u {service} -b --no-pager")
 
 
 # -------------------------------------------------
 # Service PID
 # -------------------------------------------------
 
-def service_pid(server,
-                service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} "
-        "--property=MainPID --value"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def service_pid(server, service):
+    return _run_text(server, f"systemctl show {service} --property=MainPID --value")
 
 
 # -------------------------------------------------
 # Laufzeit
 # -------------------------------------------------
 
-def service_uptime(server,
-                   service):
-
+def service_uptime(server, service):
     pid = service_pid(server, service)
 
     if pid == "0" or pid == "":
         return "Service läuft nicht"
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"ps -p {pid} -o etime="
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"ps -p {pid} -o etime=")
 
 
 # -------------------------------------------------
 # Speicherverbrauch
 # -------------------------------------------------
 
-def memory_usage(server,
-                 service):
-
+def memory_usage(server, service):
     pid = service_pid(server, service)
 
     if pid == "0" or pid == "":
         return ""
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"ps -p {pid} -o rss="
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"ps -p {pid} -o rss=")
 
 
 # -------------------------------------------------
 # CPU-Auslastung
 # -------------------------------------------------
 
-def cpu_usage(server,
-              service):
-
+def cpu_usage(server, service):
     pid = service_pid(server, service)
 
     if pid == "0" or pid == "":
         return ""
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"ps -p {pid} -o %cpu="
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"ps -p {pid} -o %cpu=")
 
 
 # -------------------------------------------------
 # Startzeit
 # -------------------------------------------------
 
-def start_time(server,
-               service):
-
+def start_time(server, service):
     pid = service_pid(server, service)
 
     if pid == "0" or pid == "":
         return ""
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"ps -p {pid} -o lstart="
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _run_text(server, f"ps -p {pid} -o lstart=")
 
 
 # -------------------------------------------------
 # Service Benutzer
 # -------------------------------------------------
 
-def service_user(server,
-                 service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"systemctl show {service} "
-        "--property=User"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def service_user(server, service):
+    return _run_text(server, f"systemctl show {service} --property=User")
 
 
 # -------------------------------------------------
 # Letzte 24 Stunden
 # -------------------------------------------------
 
-def logs_last_24h(server,
-                  service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        "--since '24 hours ago' "
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def logs_last_24h(server, service):
+    return _run_text(server, f"journalctl -u {service} --since '24 hours ago' --no-pager")
 
 
 # -------------------------------------------------
 # Fehlerlogs
 # -------------------------------------------------
 
-def error_logs(server,
-               service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        "-p err "
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def error_logs(server, service):
+    return _run_text(server, f"journalctl -u {service} -p err --no-pager")
 
 
 # -------------------------------------------------
 # Warnungen
 # -------------------------------------------------
 
-def warning_logs(server,
-                 service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        "-p warning "
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def warning_logs(server, service):
+    return _run_text(server, f"journalctl -u {service} -p warning --no-pager")
 
 
 # -------------------------------------------------
 # Nur heutige Logs
 # -------------------------------------------------
 
-def today_logs(server,
-               service):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"journalctl -u {service} "
-        "--since today "
-        "--no-pager"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+def today_logs(server, service):
+    return _run_text(server, f"journalctl -u {service} --since today --no-pager")
 
 
 # -------------------------------------------------
 # Service Informationen
 # -------------------------------------------------
 
-def service_info(server,
-                 service):
-
+def service_info(server, service):
     return {
         "status": status(server, service),
         "enabled": is_enabled(server, service),
@@ -989,5 +443,5 @@ def service_info(server,
         "uptime": service_uptime(server, service),
         "cpu": cpu_usage(server, service),
         "memory": memory_usage(server, service),
-        "logs": logs(server, service, 50)
+        "logs": logs(server, service, 50),
     }

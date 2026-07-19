@@ -42,11 +42,11 @@ class Server(BaseModel):
     description: str | None = None
 
 class AddServer(BaseModel):
-
-    hostname: str
-    ip: str
-    username: str
-    password: str
+    hostname: str = Field(..., min_length=1, max_length=128)
+    ip: str = Field(..., min_length=7, max_length=45)
+    username: str = Field(..., min_length=1, max_length=64)
+    password: str | None = None
+    private_key: str | None = None
     port: int = 22
 
 # -------------------------------------------------
@@ -82,6 +82,16 @@ class AddLXC(BaseModel):
     server: str
 
     vmid: int
+
+    template: str = "download"
+
+
+class SourceForge_templates(BaseModel):
+    name: str
+    path: str | None = None
+    type: str = "file"
+    repo_url: str = "https://sourceforge.net/projects/gatecore-template/files/"
+    download_url: str | None = None
     
 class UpdateLXC(BaseModel):
 

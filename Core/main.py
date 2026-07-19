@@ -1,43 +1,45 @@
+import asyncio
+import json
+import urllib.request
+import subprocess
+from datetime import datetime
 from pathlib import Path
 
-from fastapi import Depends, FastAPI
-from fastapi.staticfiles import StaticFiles
+from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.responses import FileResponse, JSONResponse
-from models import AddUser
-from models import ChangePassword
-from database import lxc_connection
-
-from database import user_connection
+from fastapi.staticfiles import StaticFiles
 
 from auth import (
-    require_login,
+    cleanup_sessions,
+    get_user_info,
+    hash_password,
     login,
     logout,
-    get_user_info,
-    cleanup_sessions
+    require_login,
 )
-
 from database import (
+    get_server,
     init_database,
     lxc_connection,
-    server_connection
+    server_connection,
+    storage_connection,
+    user_connection,
+    write_log,
 )
-
-from fastapi import Body
-
 from models import (
+    AddLXC,
+    AddServer,
+    AddUser,
+    ChangePassword,
     CreateStorage,
-    UpdateStorage,
-    StorageAction,
+    SnapshotClone,
     SnapshotCreate,
     SnapshotRename,
-    SnapshotClone
+    StorageAction,
+    UpdateStorage,
 )
-
-from database import storage_connection
-
-from models import AddServer, AddLXC
-
+from ssh.client import SSHClient
+from ssh.lxc import create as create_lxc_container
 from ssh.system import hostname
 
 # -------------------------------------------------
@@ -51,6 +53,139 @@ app = FastAPI(
 )
 
 BASE_DIR = Path(__file__).resolve().parent
+
+TEMPLATE_REPO = (
+    "https://git.code.sf.net/p/gatecore-template/container-templates"
+)
+
+TEMPLATE_PATH = BASE_DIR / "cache" / "templates"
+
+
+async def sync_github_templates():
+
+    try:
+
+        if TEMPLATE_PATH.exists():
+
+            subprocess.run(
+                ["git", "-C", str(TEMPLATE_PATH), "pull"],
+                check=True,
+                capture_output=True
+            )
+
+        else:
+
+            TEMPLATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+            subprocess.run(
+                [
+                    "git",
+                    "clone",
+                    TEMPLATE_REPO,
+                    str(TEMPLATE_PATH)
+                ],
+                check=True,
+                capture_output=True
+            )
+
+    except Exception as exc:
+
+        write_log(
+            None,
+            None,
+            "error",
+            "template_sync",
+            f"Repository konnte nicht synchronisiert werden: {exc}"
+        )
+
+        return
+
+    templates = []
+
+    for file in TEMPLATE_PATH.rglob("*"):
+
+        if not file.is_file():
+            continue
+
+        relative = file.relative_to(TEMPLATE_PATH)
+
+        templates.append({
+
+            "name": file.stem,
+
+            "path": str(relative),
+
+            "type": "file",
+
+            "repo_url": TEMPLATE_REPO,
+
+            "download_url": str(file)
+
+        })
+
+    conn = lxc_connection()
+
+    cursor = conn.cursor()
+
+    names = []
+
+    for template in templates:
+
+        names.append(template["name"])
+
+        cursor.execute(
+            """
+            INSERT INTO lxc_templates
+            (
+                name,
+                path,
+                type,
+                repo_url,
+                download_url,
+                last_synced
+            )
+            VALUES
+            (?,?,?,?,?,?)
+
+            ON CONFLICT(name)
+            DO UPDATE SET
+
+                path=excluded.path,
+                type=excluded.type,
+                repo_url=excluded.repo_url,
+                download_url=excluded.download_url,
+                last_synced=excluded.last_synced
+            """,
+            (
+                template["name"],
+                template["path"],
+                template["type"],
+                template["repo_url"],
+                template["download_url"],
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            )
+        )
+
+    if names:
+
+        cursor.execute(
+            f"DELETE FROM lxc_templates WHERE name NOT IN ({','.join('?' * len(names))})",
+            tuple(names)
+        )
+
+    conn.commit()
+
+    conn.close()
+
+
+async def sync_github_templates_loop() -> None:
+    """Hält den GitHub-Template-Sync im Hintergrund laufend auf 24 Stunden."""
+    await sync_github_templates()
+
+    while True:
+        await asyncio.sleep(24 * 60 * 60)
+        await sync_github_templates()
+
 
 # -------------------------------------------------
 # Datenbank initialisieren
@@ -68,6 +203,11 @@ cleanup_sessions()
 login(app)
 logout(app)
 get_user_info(app)
+
+
+@app.on_event("startup")
+async def start_template_sync_tasks() -> None:
+    asyncio.create_task(sync_github_templates_loop())
 
 # -------------------------------------------------
 # Statische Dateien
@@ -91,11 +231,6 @@ app.mount(
     name="svg"
 )
 
-app.mount(
-    "/images",
-    StaticFiles(directory=BASE_DIR / "static" / "images"),
-    name="images"
-)
 
 # -------------------------------------------------
 # Login
@@ -231,32 +366,32 @@ async def storage_page(user=Depends(require_login)):
 
 @app.get("/panel/storage/add")
 async def storage_add_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-add.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-add.html")
 
 
 @app.get("/panel/storage/edit")
 async def storage_edit_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-edit.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-edit.html")
 
 
 @app.get("/panel/storage/details")
 async def storage_details_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-details.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-details.html")
 
 
 @app.get("/panel/storage/smart")
 async def storage_smart_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-smart.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-smart.html")
 
 
 @app.get("/panel/storage/snapshots")
 async def storage_snapshots_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-snapshots.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-snapshots.html")
 
 
 @app.get("/panel/storage/scrub")
 async def storage_scrub_page(user=Depends(require_login)):
-    return FileResponse("templates/panel/storage/storage-scrub.html")
+    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-scrub.html")
 
 # -------------------------------------------------
 # API
@@ -287,37 +422,150 @@ async def add_server(
     data: AddServer,
     user=Depends(require_login)
 ):
-
+    """Speichert einen SSH-Zugriff auf einen Remote-Server in SQLite."""
     conn = server_connection()
 
-    conn.execute(
-        """
-        INSERT INTO servers
-        (
-            name,
-            host,
-            port,
-            username
+    try:
+        conn.execute(
+            """
+            INSERT INTO servers
+            (
+                name,
+                host,
+                port,
+                username,
+                password,
+                private_key
+            )
+
+            VALUES
+            (?,?,?,?,?,?)
+            """,
+            (
+                data.hostname,
+                data.ip,
+                data.port,
+                data.username,
+                data.password,
+                data.private_key,
+            ),
         )
+        conn.commit()
 
-        VALUES
-        (?,?,?)
-        """,
-        (
-            data.hostname,
-            data.ip,
-            data.port,
-            data.username
+        return {
+            "success": True,
+            "message": "Server gespeichert."
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "message": f"Server konnte nicht gespeichert werden: {exc}",
+        }
+    finally:
+        conn.close()
+
+
+@app.post("/api/server/test")
+async def test_server_connection(
+    data: AddServer,
+    user=Depends(require_login)
+):
+    """Prüft die SSH-Verbindung für einen neu eingetragenen Server."""
+    try:
+        with SSHClient({
+            "host": data.ip,
+            "port": data.port,
+            "username": data.username,
+            "password": data.password,
+            "private_key": data.private_key,
+        }) as ssh:
+            result = ssh.execute("hostname")
+
+        if result["stderr"]:
+            return {
+                "success": False,
+                "message": result["stderr"],
+            }
+
+        return {
+            "success": True,
+            "message": f"Verbindung erfolgreich. Hostname: {result['stdout']}",
+        }
+    except Exception as exc:
+        return {
+            "success": False,
+            "message": f"Verbindung fehlgeschlagen: {exc}",
+        }
+
+
+@app.post("/api/server/test/{server_id}")
+async def test_server_connection_by_id(
+    server_id: int,
+    user=Depends(require_login)
+):
+    """Prüft die SSH-Verbindung für einen bereits gespeicherten Server."""
+    conn = server_connection()
+
+    try:
+        row = conn.execute(
+            "SELECT id, name, host, port, username, password, private_key FROM servers WHERE id=?",
+            (server_id,),
+        ).fetchone()
+
+        if row is None:
+            raise HTTPException(status_code=404, detail="Server nicht gefunden")
+
+        with SSHClient(dict(row)) as ssh:
+            result = ssh.execute("hostname")
+
+        if result["stderr"]:
+            return {
+                "success": False,
+                "message": result["stderr"],
+            }
+
+        return {
+            "success": True,
+            "message": f"Verbindung erfolgreich. Hostname: {result['stdout']}",
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        return {
+            "success": False,
+            "message": f"Verbindung fehlgeschlagen: {exc}",
+        }
+    finally:
+        conn.close()
+
+
+@app.delete("/api/server/delete/{server_id}")
+async def delete_server(
+    server_id: int,
+    user=Depends(require_login)
+):
+    """Löscht einen gespeicherten Server aus der SQLite-Datenbank."""
+    conn = server_connection()
+
+    try:
+        cursor = conn.execute(
+            "DELETE FROM servers WHERE id=?",
+            (server_id,),
         )
-    )
+        conn.commit()
 
-    conn.commit()
-    conn.close()
+        if cursor.rowcount == 0:
+            return {
+                "success": False,
+                "message": "Server nicht gefunden.",
+            }
 
-    return {
-        "success": True,
-        "message": "Server gespeichert."
-    }
+        return {
+            "success": True,
+            "message": "Server gelöscht.",
+        }
+    finally:
+        conn.close()
 
 @app.get("/api/server/list")
 async def list_servers(user=Depends(require_login)):
@@ -457,52 +705,39 @@ async def add_user(
     data: AddUser,
     user=Depends(require_login)
 ):
-
+    """Erzeugt einen Benutzer mit bcrypt-gehashtem Passwort."""
     conn = user_connection()
 
     try:
+        hashed_password = hash_password(data.password)
 
-        conn.execute("""
-
+        conn.execute(
+            """
             INSERT INTO users
             (
                 username,
                 password
             )
-
             VALUES
             (?,?)
-
-        """,(
-
-            data.username,
-
-            data.password
-
-        ))
-
+            """,
+            (
+                data.username,
+                hashed_password,
+            ),
+        )
         conn.commit()
 
         return {
-
-            "success":True,
-
-            "message":"Benutzer erstellt."
-
+            "success": True,
+            "message": "Benutzer erstellt.",
         }
-
-    except Exception as e:
-
+    except Exception as exc:
         return {
-
-            "success":False,
-
-            "message":str(e)
-
+            "success": False,
+            "message": str(exc),
         }
-
     finally:
-
         conn.close()
         
 # -------------------------------------------------
@@ -547,42 +782,31 @@ async def change_password(
     data: ChangePassword,
     user=Depends(require_login)
 ):
-
+    """Aktualisiert das Passwort eines Benutzers mit bcrypt-Hashing."""
     conn = user_connection()
 
-    conn.execute(
+    try:
+        hashed_password = hash_password(data.password)
 
-        """
-
-        UPDATE users
-
-        SET password=?
-
-        WHERE id=?
-
-        """,
-
-        (
-
-            data.password,
-
-            data.id
-
+        conn.execute(
+            """
+            UPDATE users
+            SET password=?
+            WHERE id=?
+            """,
+            (
+                hashed_password,
+                data.id,
+            ),
         )
+        conn.commit()
 
-    )
-
-    conn.commit()
-
-    conn.close()
-
-    return {
-
-        "success":True,
-
-        "message":"Passwort geändert."
-
-    }
+        return {
+            "success": True,
+            "message": "Passwort geändert.",
+        }
+    finally:
+        conn.close()
     
 # -------------------------------------------------
 # LXC Liste
@@ -601,6 +825,7 @@ async def lxc_list(user=Depends(require_login)):
             id,
             name,
             server,
+            template,
             status,
             ip,
             cpu,
@@ -625,6 +850,7 @@ async def lxc_list(user=Depends(require_login)):
             "id": row["id"],
             "name": row["name"],
             "server": row["server"],
+            "template": row["template"],
             "status": row["status"],
             "ip": row["ip"],
             "cpu": row["cpu"],
@@ -708,6 +934,35 @@ async def add_lxc(
     user=Depends(require_login)
 ):
 
+    server_row = get_server(int(data.server))
+
+    if server_row is None:
+        raise HTTPException(status_code=404, detail="Server nicht gefunden.")
+
+    remote_server = {
+        "host": server_row["host"],
+        "port": server_row["port"],
+        "username": server_row["username"],
+        "password": server_row["password"],
+        "private_key": server_row["private_key"],
+    }
+
+    try:
+        create_result = create_lxc_container(
+            remote_server,
+            data.name,
+            data.template,
+            backing_store="dir",
+        )
+
+        if create_result.get("stderr"):
+            raise RuntimeError(create_result["stderr"])
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Container konnte nicht erstellt werden: {exc}"
+        ) from exc
+
     conn = lxc_connection()
 
     conn.execute("""
@@ -716,11 +971,13 @@ async def add_lxc(
         (
             name,
             vmid,
-            server
+            server,
+            template,
+            status
         )
 
         VALUES
-        (?,?,?)
+        (?,?,?,?,?)
 
     """,(
 
@@ -728,7 +985,11 @@ async def add_lxc(
 
         data.vmid,
 
-        data.server
+        data.server,
+
+        data.template,
+
+        "creating"
 
     ))
 
@@ -744,6 +1005,34 @@ async def add_lxc(
 
     }
     
+@app.get("/api/lxc/templates")
+async def lxc_templates(user=Depends(require_login)):
+
+    conn = lxc_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, name, path, type, repo_url, download_url
+        FROM lxc_templates
+        ORDER BY name
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [
+        {
+            "id": row["id"],
+            "name": row["name"],
+            "path": row["path"],
+            "type": row["type"],
+            "repo_url": row["repo_url"],
+            "download_url": row["download_url"],
+        }
+        for row in rows
+    ]
+
+
 @app.get("/api/server/select")
 async def server_select(user=Depends(require_login)):
 

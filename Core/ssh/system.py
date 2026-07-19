@@ -1,4 +1,30 @@
+from typing import Any
+
 from ssh.client import SSHClient
+
+
+def _run_remote_command(server: dict[str, Any], command: str) -> dict[str, str]:
+    """Führt einen Remote-Befehl mit zentraler SSH-Connection-Handling-Logik aus."""
+    with SSHClient(server) as ssh:
+        return ssh.execute(command)
+
+
+def _read_text(server: dict[str, Any], command: str) -> str:
+    """Liest stdout eines SSH-Befehls als Text aus."""
+    result = _run_remote_command(server, command)
+    return result["stdout"] if result["stdout"] else result["stderr"]
+
+
+def _read_float(server: dict[str, Any], command: str) -> float:
+    """Liest stdout eines SSH-Befehls als Float aus."""
+    value = _read_text(server, command)
+    return float(value) if value else 0.0
+
+
+def _read_int(server: dict[str, Any], command: str) -> int:
+    """Liest stdout eines SSH-Befehls als Integer aus."""
+    value = _read_text(server, command)
+    return int(value) if value else 0
 
 
 # -------------------------------------------------
@@ -7,15 +33,7 @@ from ssh.client import SSHClient
 
 def hostname(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute("hostname")
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "hostname")
 
 
 # -------------------------------------------------
@@ -24,17 +42,10 @@ def hostname(server):
 
 def os(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
+    return _read_text(
+        server,
         "source /etc/os-release && echo \"$PRETTY_NAME\""
     )
-
-    ssh.close()
-
-    return result["stdout"]
 
 
 # -------------------------------------------------
@@ -43,15 +54,7 @@ def os(server):
 
 def kernel(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute("uname -r")
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "uname -r")
 
 
 # -------------------------------------------------
@@ -60,17 +63,7 @@ def kernel(server):
 
 def uptime(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "uptime -p"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "uptime -p")
 
 
 # -------------------------------------------------
@@ -79,17 +72,7 @@ def uptime(server):
 
 def date(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "date '+%d.%m.%Y %H:%M:%S'"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "date '+%d.%m.%Y %H:%M:%S'")
 
 
 # -------------------------------------------------
@@ -98,17 +81,7 @@ def date(server):
 
 def timezone(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "timedatectl show --property=Timezone --value"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "timedatectl show --property=Timezone --value")
 
 
 # -------------------------------------------------
@@ -117,17 +90,7 @@ def timezone(server):
 
 def uptime_seconds(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "cut -d' ' -f1 /proc/uptime"
-    )
-
-    ssh.close()
-
-    return float(result["stdout"])
+    return _read_float(server, "cut -d' ' -f1 /proc/uptime")
 
 
 # -------------------------------------------------
@@ -136,17 +99,7 @@ def uptime_seconds(server):
 
 def boot_time(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "who -b | awk '{print $3\" \"$4}'"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "who -b | awk '{print $3\" \"$4}'")
 
 
 # -------------------------------------------------
@@ -155,17 +108,7 @@ def boot_time(server):
 
 def logged_users(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "who"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
+    return _read_text(server, "who")
 
 
 # -------------------------------------------------
@@ -174,17 +117,7 @@ def logged_users(server):
 
 def logged_users_count(server):
 
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "who | wc -l"
-    )
-
-    ssh.close()
-
-    return int(result["stdout"])
+    return _read_int(server, "who | wc -l")
 
 
 # -------------------------------------------------

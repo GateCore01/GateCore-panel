@@ -89,11 +89,20 @@
             </div>
 
             <div class="form-group">
-                <label>SSH Passwort</label>
+                <label>SSH Passwort (optional bei SSH-Key)</label>
                 <input
                     type="password"
                     id="password"
-                    required
+                    placeholder="Nur wenn kein SSH-Key verwendet wird"
+                >
+            </div>
+
+            <div class="form-group">
+                <label>SSH Private Key Pfad (optional)</label>
+                <input
+                    type="text"
+                    id="privateKey"
+                    placeholder="/home/gatecore/.ssh/id_ed25519"
                 >
             </div>
 
