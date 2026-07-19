@@ -2,7 +2,7 @@ from ssh.client import SSHClient
 
 
 # -------------------------------------------------
-# Alle Container auflisten
+# Alle Container anzeigen
 # -------------------------------------------------
 
 def list(server):
@@ -12,7 +12,7 @@ def list(server):
     ssh.connect()
 
     result = ssh.execute(
-        "pct list"
+        "lxc-ls --fancy"
     )
 
     ssh.close()
@@ -21,55 +21,55 @@ def list(server):
 
 
 # -------------------------------------------------
-# Status aller Container
+# Nur Containernamen
 # -------------------------------------------------
 
-def status(server):
+def names(server):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        "pct list"
+        "lxc-ls"
     )
 
     ssh.close()
 
-    return result["stdout"]
+    return result["stdout"].split()
 
 
 # -------------------------------------------------
-# Status eines Containers
+# Existiert Container?
 # -------------------------------------------------
 
-def status_id(server, vmid):
+def exists(server, name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct status {vmid}"
+        f"lxc-info -n {name}"
     )
 
     ssh.close()
 
-    return result["stdout"]
+    return result["stderr"] == ""
 
 
 # -------------------------------------------------
-# Konfiguration eines Containers
+# Status
 # -------------------------------------------------
 
-def config(server, vmid):
+def status(server, name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct config {vmid}"
+        f"lxc-info -n {name}"
     )
 
     ssh.close()
@@ -78,301 +78,295 @@ def config(server, vmid):
 
 
 # -------------------------------------------------
-# Konfiguration aller Container
+# Läuft Container?
 # -------------------------------------------------
 
-def config_all(server):
+def running(server, name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "echo '=========='; "
-        "echo $i; "
-        "pct config $i; "
-        "done"
+        f"lxc-info -n {name} | grep State"
+    )
+
+    ssh.close()
+
+    return "RUNNING" in result["stdout"]
+
+
+# -------------------------------------------------
+# Starten
+# -------------------------------------------------
+
+def start(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-start -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Stoppen
+# -------------------------------------------------
+
+def stop(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-stop -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Neustarten
+# -------------------------------------------------
+
+def restart(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    ssh.execute(
+        f"sudo lxc-stop -n {name}"
+    )
+
+    result = ssh.execute(
+        f"sudo lxc-start -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Container pausieren
+# -------------------------------------------------
+
+def freeze(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-freeze -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Pause aufheben
+# -------------------------------------------------
+
+def unfreeze(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-unfreeze -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Auf Status warten
+# -------------------------------------------------
+
+def wait(server,
+         name,
+         state="RUNNING"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"lxc-wait -n {name} -s {state}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Container Informationen
+# -------------------------------------------------
+
+def info(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"lxc-info -n {name}"
     )
 
     ssh.close()
 
     return result["stdout"]
 
+
+# -------------------------------------------------
+# Ausführliche Informationen
+# -------------------------------------------------
+
+def info_full(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"lxc-info -n {name} -H"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Prozess-ID
+# -------------------------------------------------
+
+def pid(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"lxc-info -n {name} -pH"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# IP-Adresse
+# -------------------------------------------------
+
+def ip(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"lxc-info -n {name} -iH"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# RAM Nutzung
+# -------------------------------------------------
+
+def memory(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    pid_result = ssh.execute(
+        f"lxc-info -n {name} -pH"
+    )
+
+    pid = pid_result["stdout"].strip()
+
+    if pid == "":
+        ssh.close()
+        return ""
+
+    result = ssh.execute(
+        f"ps -p {pid} -o rss="
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# CPU Nutzung
+# -------------------------------------------------
+
+def cpu(server, name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    pid_result = ssh.execute(
+        f"lxc-info -n {name} -pH"
+    )
+
+    pid = pid_result["stdout"].strip()
+
+    if pid == "":
+        ssh.close()
+        return ""
+
+    result = ssh.execute(
+        f"ps -p {pid} -o %cpu="
+    )
+
+    ssh.close()
+
+    return result["stdout"]
 
 # -------------------------------------------------
 # Container erstellen
 # -------------------------------------------------
 
 def create(server,
-           vmid,
+           name,
            template,
-           hostname,
-           storage,
-           password,
-           cores=2,
-           memory=2048,
-           disk=8,
-           swap=512,
-           bridge="vmbr0"):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    command = (
-        f"pct create {vmid} {template} "
-        f"--hostname {hostname} "
-        f"--storage {storage} "
-        f"--rootfs {storage}:{disk} "
-        f"--cores {cores} "
-        f"--memory {memory} "
-        f"--swap {swap} "
-        f"--net0 name=eth0,bridge={bridge},ip=dhcp "
-        f"--password '{password}' "
-        "--unprivileged 1 "
-        "--features nesting=1"
-    )
-
-    result = ssh.execute(command)
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container starten
-# -------------------------------------------------
-
-def start(server, vmid):
+           backing_store="dir"):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct start {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container starten
-# -------------------------------------------------
-
-def start_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct start $i; "
-        "done"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container stoppen
-# -------------------------------------------------
-
-def stop(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct stop {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container stoppen
-# -------------------------------------------------
-
-def stop_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct stop $i; "
-        "done"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container sauber herunterfahren
-# -------------------------------------------------
-
-def shutdown(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct shutdown {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container herunterfahren
-# -------------------------------------------------
-
-def shutdown_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct shutdown $i; "
-        "done"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container neu starten
-# -------------------------------------------------
-
-def reboot(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct reboot {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container neu starten
-# -------------------------------------------------
-
-def reboot_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct reboot $i; "
-        "done"
-    )
-
-    ssh.close()
-
-    return result
-
-# -------------------------------------------------
-# Container pausieren
-# -------------------------------------------------
-
-def suspend(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct suspend {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container pausieren
-# -------------------------------------------------
-
-def suspend_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct suspend $i; "
-        "done"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container fortsetzen
-# -------------------------------------------------
-
-def resume(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct resume {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Alle Container fortsetzen
-# -------------------------------------------------
-
-def resume_all(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "for i in $(pct list | awk 'NR>1 {print $1}'); do "
-        "pct resume $i; "
-        "done"
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t {template} "
+        f"-B {backing_store}"
     )
 
     ssh.close()
@@ -384,280 +378,43 @@ def resume_all(server):
 # Container löschen
 # -------------------------------------------------
 
-def destroy(server, vmid):
+def destroy(server,
+            name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct destroy {vmid}"
+        f"sudo lxc-destroy -n {name}"
     )
 
     ssh.close()
 
     return result
 
-
-# -------------------------------------------------
-# Befehl im Container ausführen
-# -------------------------------------------------
-
-def exec(server, vmid, command):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct exec {vmid} -- {command}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Bash im Container
-# -------------------------------------------------
-
-def bash(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "/bin/bash"
-    )
-
-
-# -------------------------------------------------
-# Shell im Container
-# -------------------------------------------------
-
-def shell(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "/bin/sh"
-    )
-
-
-# -------------------------------------------------
-# Container-Konsole
-# -------------------------------------------------
-
-def console(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct console {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container betreten
-# -------------------------------------------------
-
-def enter(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct enter {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Container entsperren
-# -------------------------------------------------
-
-def unlock(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct unlock {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Pending Änderungen
-# -------------------------------------------------
-
-def pending(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct pending {vmid}"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
-
-
-# -------------------------------------------------
-# Prüfen ob Container läuft
-# -------------------------------------------------
-
-def is_running(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct status {vmid}"
-    )
-
-    ssh.close()
-
-    return "running" in result["stdout"]
-
-
-# -------------------------------------------------
-# Prüfen ob Container gestoppt ist
-# -------------------------------------------------
-
-def is_stopped(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct status {vmid}"
-    )
-
-    ssh.close()
-
-    return "stopped" in result["stdout"]
-
-
-# -------------------------------------------------
-# Container existiert
-# -------------------------------------------------
-
-def exists(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "pct list | awk 'NR>1 {print $1}'"
-    )
-
-    ssh.close()
-
-    ids = result["stdout"].splitlines()
-
-    return str(vmid) in ids
-
-
-# -------------------------------------------------
-# Anzahl Container
-# -------------------------------------------------
-
-def count(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "pct list | tail -n +2 | wc -l"
-    )
-
-    ssh.close()
-
-    return int(result["stdout"])
-
-
-# -------------------------------------------------
-# Laufende Container
-# -------------------------------------------------
-
-def running(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "pct list | grep running"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
-
-
-# -------------------------------------------------
-# Gestoppte Container
-# -------------------------------------------------
-
-def stopped(server):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        "pct list | grep stopped"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
 
 # -------------------------------------------------
 # Container klonen
 # -------------------------------------------------
 
-def clone(server,
-          vmid,
-          newid,
-          hostname=None,
-          full=True):
+def copy(server,
+         source,
+         target,
+         snapshot=False):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     command = (
-        f"pct clone {vmid} {newid}"
+        f"sudo lxc-copy "
+        f"-n {source} "
+        f"-N {target}"
     )
 
-    if hostname:
-        command += f" --hostname {hostname}"
-
-    if full:
-        command += " --full 1"
+    if snapshot:
+        command += " -s"
 
     result = ssh.execute(command)
 
@@ -671,22 +428,18 @@ def clone(server,
 # -------------------------------------------------
 
 def snapshot(server,
-             vmid,
              name,
-             description=""):
+             snapshot_name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
-    command = (
-        f"pct snapshot {vmid} {name}"
+    result = ssh.execute(
+        f"sudo lxc-snapshot "
+        f"-n {name} "
+        f"-N {snapshot_name}"
     )
-
-    if description:
-        command += f' --description "{description}"'
-
-    result = ssh.execute(command)
 
     ssh.close()
 
@@ -694,18 +447,20 @@ def snapshot(server,
 
 
 # -------------------------------------------------
-# Snapshotliste
+# Snapshots anzeigen
 # -------------------------------------------------
 
-def listsnapshot(server,
-                 vmid):
+def snapshots(server,
+              name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct listsnapshot {vmid}"
+        f"sudo lxc-snapshot "
+        f"-n {name} "
+        "-L"
     )
 
     ssh.close()
@@ -714,68 +469,44 @@ def listsnapshot(server,
 
 
 # -------------------------------------------------
-# Snapshotnamen
+# Snapshot wiederherstellen
 # -------------------------------------------------
 
-def snapshot_names(server,
-                   vmid):
+def restore_snapshot(server,
+                     name,
+                     snapshot_name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct listsnapshot {vmid} | awk 'NR>1 {{print $2}}'"
+        f"sudo lxc-snapshot "
+        f"-n {name} "
+        f"-r {snapshot_name}"
     )
 
     ssh.close()
 
-    return result["stdout"].splitlines()
-
-
-# -------------------------------------------------
-# Snapshot vorhanden?
-# -------------------------------------------------
-
-def snapshot_exists(server,
-                    vmid,
-                    name):
-
-    return name in snapshot_names(
-        server,
-        vmid
-    )
-
-
-# -------------------------------------------------
-# Anzahl Snapshots
-# -------------------------------------------------
-
-def snapshot_count(server,
-                   vmid):
-
-    return len(
-        snapshot_names(
-            server,
-            vmid
-        )
-    )
+    return result
 
 
 # -------------------------------------------------
 # Snapshot löschen
 # -------------------------------------------------
 
-def delsnapshot(server,
-                vmid,
-                name):
+def delete_snapshot(server,
+                    name,
+                    snapshot_name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct delsnapshot {vmid} {name}"
+        f"sudo lxc-snapshot "
+        f"-n {name} "
+        f"-d {snapshot_name}"
     )
 
     ssh.close()
@@ -784,40 +515,18 @@ def delsnapshot(server,
 
 
 # -------------------------------------------------
-# Rollback
+# Konfiguration anzeigen
 # -------------------------------------------------
 
-def rollback(server,
-             vmid,
-             snapshot):
+def config(server,
+           name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct rollback {vmid} {snapshot}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Snapshot Beschreibung
-# -------------------------------------------------
-
-def snapshot_description(server,
-                         vmid,
-                         snapshot):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct listsnapshot {vmid}"
+        f"cat /var/lib/lxc/{name}/config"
     )
 
     ssh.close()
@@ -826,54 +535,21 @@ def snapshot_description(server,
 
 
 # -------------------------------------------------
-# Letzten Snapshot
+# Konfiguration sichern
 # -------------------------------------------------
 
-def latest_snapshot(server,
-                    vmid):
-
-    snapshots = snapshot_names(
-        server,
-        vmid
-    )
-
-    if len(snapshots) == 0:
-        return None
-
-    return snapshots[-1]
-
-
-# -------------------------------------------------
-# Ersten Snapshot
-# -------------------------------------------------
-
-def first_snapshot(server,
-                   vmid):
-
-    snapshots = snapshot_names(
-        server,
-        vmid
-    )
-
-    if len(snapshots) == 0:
-        return None
-
-    return snapshots[0]
-
-
-# -------------------------------------------------
-# Template erzeugen
-# -------------------------------------------------
-
-def template(server,
-             vmid):
+def backup_config(server,
+                  name,
+                  destination):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct template {vmid}"
+        f"cp "
+        f"/var/lib/lxc/{name}/config "
+        f"{destination}"
     )
 
     ssh.close()
@@ -882,57 +558,42 @@ def template(server,
 
 
 # -------------------------------------------------
-# Ist Template?
+# Konfiguration ersetzen
 # -------------------------------------------------
 
-def is_template(server,
-                vmid):
+def restore_config(server,
+                   name,
+                   source):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct config {vmid} | grep '^template:'"
+        f"cp "
+        f"{source} "
+        f"/var/lib/lxc/{name}/config"
     )
 
     ssh.close()
 
-    return result["stdout"] != ""
+    return result
 
 
 # -------------------------------------------------
-# Template klonen
+# RootFS Pfad
 # -------------------------------------------------
 
-def clone_template(server,
-                   template_id,
-                   new_id,
-                   hostname):
-
-    return clone(
-        server,
-        template_id,
-        new_id,
-        hostname=hostname,
-        full=True
-    )
-
-
-# -------------------------------------------------
-# Snapshot Informationen
-# -------------------------------------------------
-
-def snapshot_info(server,
-                  vmid,
-                  snapshot):
+def rootfs(server,
+           name):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"pct listsnapshot {vmid} | grep '{snapshot}'"
+        f"grep '^lxc.rootfs.path' "
+        f"/var/lib/lxc/{name}/config"
     )
 
     ssh.close()
@@ -941,53 +602,1023 @@ def snapshot_info(server,
 
 
 # -------------------------------------------------
-# Alle Snapshots löschen
+# Container Pfad
 # -------------------------------------------------
 
-def delete_all_snapshots(server,
-                         vmid):
+def path(server,
+         name):
 
-    snapshots = snapshot_names(
-        server,
-        vmid
+    return f"/var/lib/lxc/{name}"
+
+
+# -------------------------------------------------
+# Containergröße
+# -------------------------------------------------
+
+def size(server,
+         name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"du -sh /var/lib/lxc/{name}"
     )
 
-    results = []
+    ssh.close()
 
-    for snap in snapshots:
+    return result["stdout"]
 
-        results.append(
-            delsnapshot(
-                server,
-                vmid,
-                snap
-            )
-        )
-
-    return results
 
 # -------------------------------------------------
-# Backup erstellen (vzdump)
+# Container exportieren
+# -------------------------------------------------
+
+def export(server,
+           name,
+           archive):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"tar -czf {archive} "
+        f"/var/lib/lxc/{name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Container importieren
+# -------------------------------------------------
+
+def import_container(server,
+                     archive):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"tar -xzf {archive} "
+        f"-C /var/lib/lxc/"
+    )
+
+    ssh.close()
+
+    return result
+
+# -------------------------------------------------
+# Kommando im Container ausführen
+# -------------------------------------------------
+
+def attach(server,
+           name,
+           command="/bin/bash"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- {command}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Shell öffnen
+# -------------------------------------------------
+
+def shell(server,
+          name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Konsole öffnen
+# -------------------------------------------------
+
+def console(server,
+            name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-console -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Container überwachen
+# -------------------------------------------------
+
+def monitor(server,
+            name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-monitor -n {name}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Top (alle Container)
+# -------------------------------------------------
+
+def top(server):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        "sudo lxc-top"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# CGroup Informationen
+# -------------------------------------------------
+
+def cgroup(server,
+           name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name}"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Einzelnen CGroup Wert lesen
+# -------------------------------------------------
+
+def cgroup_get(server,
+               name,
+               key):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} {key}"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# CGroup Wert setzen
+# -------------------------------------------------
+
+def cgroup_set(server,
+               name,
+               key,
+               value):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} {key} {value}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Gerät hinzufügen
+# -------------------------------------------------
+
+def add_device(server,
+               name,
+               host_path,
+               container_path):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"echo 'lxc.mount.entry = "
+        f"{host_path} {container_path} none bind,create=file 0 0' "
+        f"| sudo tee -a /var/lib/lxc/{name}/config"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# USB Gerät durchreichen
+# -------------------------------------------------
+
+def usb_device(server,
+               name,
+               device):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"echo 'lxc.mount.entry = "
+        f"{device} {device} none bind,optional,create=file 0 0' "
+        f"| sudo tee -a /var/lib/lxc/{name}/config"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Ordner mounten
+# -------------------------------------------------
+
+def mount_directory(server,
+                    name,
+                    host_dir,
+                    container_dir):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"echo 'lxc.mount.entry = "
+        f"{host_dir} {container_dir} none bind,create=dir 0 0' "
+        f"| sudo tee -a /var/lib/lxc/{name}/config"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Mount entfernen
+# -------------------------------------------------
+
+def unmount(server,
+            name,
+            path):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo sed -i '\\|{path}|d' "
+        f"/var/lib/lxc/{name}/config"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Mounts anzeigen
+# -------------------------------------------------
+
+def mounts(server,
+           name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"grep '^lxc.mount.entry' "
+        f"/var/lib/lxc/{name}/config"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Container Log
+# -------------------------------------------------
+
+def log(server,
+        name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"cat /var/log/lxc/{name}.log"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Live Log
+# -------------------------------------------------
+
+def log_follow(server,
+               name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"tail -f /var/log/lxc/{name}.log"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Prozessliste im Container
+# -------------------------------------------------
+
+def processes(server,
+              name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- ps aux"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Container Statistiken
+# -------------------------------------------------
+
+def stats(server,
+          name):
+
+    return {
+        "status": status(server, name),
+        "pid": pid(server, name),
+        "ip": ip(server, name),
+        "cpu": cpu(server, name),
+        "memory": memory(server, name),
+        "mounts": mounts(server, name)
+    }
+
+# -------------------------------------------------
+# CPU Limit setzen
+# -------------------------------------------------
+
+def set_cpu_limit(server,
+                  name,
+                  cores):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} cpuset.cpus {cores}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# CPU Shares setzen
+# -------------------------------------------------
+
+def set_cpu_shares(server,
+                   name,
+                   shares):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} cpu.shares {shares}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# RAM Limit setzen
+# -------------------------------------------------
+
+def set_memory_limit(server,
+                     name,
+                     memory):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} memory.limit_in_bytes {memory}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Swap Limit setzen
+# -------------------------------------------------
+
+def set_swap_limit(server,
+                   name,
+                   swap):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} memory.memsw.limit_in_bytes {swap}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# PID Limit
+# -------------------------------------------------
+
+def set_pid_limit(server,
+                  name,
+                  limit):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} pids.max {limit}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Block-I/O Gewicht
+# -------------------------------------------------
+
+def set_io_weight(server,
+                  name,
+                  weight):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-cgroup -n {name} blkio.weight {weight}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Netzwerkinterfaces
+# -------------------------------------------------
+
+def network(server,
+            name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- ip addr"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Routingtabelle
+# -------------------------------------------------
+
+def routes(server,
+           name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- ip route"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Hostname
+# -------------------------------------------------
+
+def hostname(server,
+             name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- hostname"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# DNS
+# -------------------------------------------------
+
+def dns(server,
+        name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- cat /etc/resolv.conf"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Betriebssystem
+# -------------------------------------------------
+
+def os(server,
+       name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- cat /etc/os-release"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Kernel
+# -------------------------------------------------
+
+def kernel(server,
+           name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- uname -r"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Festplatten
+# -------------------------------------------------
+
+def disks(server,
+          name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- lsblk"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Dateisystem
+# -------------------------------------------------
+
+def filesystem(server,
+               name):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- df -h"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Netzwerkkonfiguration ändern
+# -------------------------------------------------
+
+def set_ip(server,
+           name,
+           interface,
+           ip,
+           prefix):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- "
+        f"ip addr add {ip}/{prefix} dev {interface}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Gateway setzen
+# -------------------------------------------------
+
+def set_gateway(server,
+                name,
+                gateway):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-attach -n {name} -- "
+        f"ip route replace default via {gateway}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Ressourcenübersicht
+# -------------------------------------------------
+
+def resources(server,
+              name):
+
+    return {
+        "cpu": cpu(server, name),
+        "memory": memory(server, name),
+        "filesystem": filesystem(server, name),
+        "network": network(server, name),
+        "routes": routes(server, name),
+        "hostname": hostname(server, name),
+        "dns": dns(server, name)
+    }
+
+# -------------------------------------------------
+# Verfügbare Templates
+# -------------------------------------------------
+
+def templates(server):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        "ls /usr/share/lxc/templates"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Downloadbare Images (distrobuilder)
+# -------------------------------------------------
+
+def images(server):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        "lxc-create -t download --help"
+    )
+
+    ssh.close()
+
+    return result["stdout"]
+
+
+# -------------------------------------------------
+# Debian Container erstellen
+# -------------------------------------------------
+
+def create_debian(server,
+                  name,
+                  release="bookworm",
+                  arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist debian "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Ubuntu Container erstellen
+# -------------------------------------------------
+
+def create_ubuntu(server,
+                  name,
+                  release="24.04",
+                  arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist ubuntu "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Rocky Linux Container
+# -------------------------------------------------
+
+def create_rocky(server,
+                 name,
+                 release="9",
+                 arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist rocky "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# openSUSE Leap
+# -------------------------------------------------
+
+def create_opensuse(server,
+                    name,
+                    release="15.6",
+                    arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist opensuse "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Alpine Linux
+# -------------------------------------------------
+
+def create_alpine(server,
+                  name,
+                  release="3.22",
+                  arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist alpine "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Arch Linux
+# -------------------------------------------------
+
+def create_arch(server,
+                name,
+                release="current",
+                arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist archlinux "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Fedora
+# -------------------------------------------------
+
+def create_fedora(server,
+                  name,
+                  release="42",
+                  arch="amd64"):
+
+    ssh = SSHClient(server)
+
+    ssh.connect()
+
+    result = ssh.execute(
+        f"sudo lxc-create "
+        f"-n {name} "
+        f"-t download -- "
+        f"--dist fedora "
+        f"--release {release} "
+        f"--arch {arch}"
+    )
+
+    ssh.close()
+
+    return result
+
+
+# -------------------------------------------------
+# Backup erstellen
 # -------------------------------------------------
 
 def backup(server,
-           vmid,
-           storage="local",
-           mode="snapshot",
-           compress="zstd"):
+           name,
+           destination):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
-    command = (
-        f"vzdump {vmid} "
-        f"--storage {storage} "
-        f"--mode {mode} "
-        f"--compress {compress}"
+    result = ssh.execute(
+        f"sudo tar -czpf "
+        f"{destination}/{name}.tar.gz "
+        f"/var/lib/lxc/{name}"
     )
-
-    result = ssh.execute(command)
 
     ssh.close()
 
@@ -999,21 +1630,16 @@ def backup(server,
 # -------------------------------------------------
 
 def restore(server,
-            backup_file,
-            vmid,
-            storage="local-lvm"):
+            archive):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
-    command = (
-        f"pct restore {vmid} "
-        f"{backup_file} "
-        f"--storage {storage}"
+    result = ssh.execute(
+        f"sudo tar -xzpf {archive} "
+        f"-C /var/lib/lxc/"
     )
-
-    result = ssh.execute(command)
 
     ssh.close()
 
@@ -1021,17 +1647,18 @@ def restore(server,
 
 
 # -------------------------------------------------
-# Backupdateien anzeigen
+# Alle Backups anzeigen
 # -------------------------------------------------
 
-def backup_list(server):
+def backups(server,
+            directory):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        "find /var/lib/vz/dump -type f"
+        f"ls -lh {directory}"
     )
 
     ssh.close()
@@ -1040,38 +1667,17 @@ def backup_list(server):
 
 
 # -------------------------------------------------
-# Backup löschen
+# LXC Version
 # -------------------------------------------------
 
-def backup_delete(server,
-                  filename):
+def version(server):
 
     ssh = SSHClient(server)
 
     ssh.connect()
 
     result = ssh.execute(
-        f"rm -f {filename}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Backupgröße
-# -------------------------------------------------
-
-def backup_size(server,
-                filename):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"ls -lh {filename}"
+        "lxc-info --version"
     )
 
     ssh.close()
@@ -1080,673 +1686,26 @@ def backup_size(server,
 
 
 # -------------------------------------------------
-# Container migrieren
+# Host Informationen
 # -------------------------------------------------
 
-def migrate(server,
-            vmid,
-            target):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct migrate {vmid} {target}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Live-Migration
-# -------------------------------------------------
-
-def migrate_online(server,
-                   vmid,
-                   target):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct migrate {vmid} {target} --online"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Mountpoint einhängen
-# -------------------------------------------------
-
-def mount(server,
-          vmid,
-          mp="mp0"):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct mount {vmid} {mp}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Mountpoint aushängen
-# -------------------------------------------------
-
-def unmount(server,
-            vmid,
-            mp="mp0"):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct unmount {vmid} {mp}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Datei in Container kopieren
-# -------------------------------------------------
-
-def push(server,
-         vmid,
-         source,
-         target):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct push {vmid} {source} {target}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Datei aus Container kopieren
-# -------------------------------------------------
-
-def pull(server,
-         vmid,
-         source,
-         target):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct pull {vmid} {source} {target}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Dateisystem prüfen
-# -------------------------------------------------
-
-def fsck(server,
-         vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct fsck {vmid}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Backup vorhanden?
-# -------------------------------------------------
-
-def backup_exists(server,
-                  filename):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"test -f {filename} && echo YES || echo NO"
-    )
-
-    ssh.close()
-
-    return result["stdout"] == "YES"
-
-
-# -------------------------------------------------
-# Backup Hash
-# -------------------------------------------------
-
-def backup_sha256(server,
-                  filename):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"sha256sum {filename}"
-    )
-
-    ssh.close()
-
-    return result["stdout"]
-
-
-# -------------------------------------------------
-# Backup umbenennen
-# -------------------------------------------------
-
-def backup_rename(server,
-                  old_name,
-                  new_name):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"mv {old_name} {new_name}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Backup komprimieren
-# -------------------------------------------------
-
-def backup_compress(server,
-                    filename):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"gzip -f {filename}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Backup entpacken
-# -------------------------------------------------
-
-def backup_decompress(server,
-                      filename):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"gunzip -f {filename}"
-    )
-
-    ssh.close()
-
-    return result
-
-# -------------------------------------------------
-# CPU Kerne ändern
-# -------------------------------------------------
-
-def set_cpu(server, vmid, cores):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --cores {cores}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# RAM ändern
-# -------------------------------------------------
-
-def set_memory(server, vmid, memory):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --memory {memory}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Swap ändern
-# -------------------------------------------------
-
-def set_swap(server, vmid, swap):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --swap {swap}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# RootFS vergrößern
-# -------------------------------------------------
-
-def resize(server, vmid, size):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct resize {vmid} rootfs {size}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Hostname ändern
-# -------------------------------------------------
-
-def set_hostname(server, vmid, hostname):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --hostname {hostname}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Beschreibung ändern
-# -------------------------------------------------
-
-def set_description(server, vmid, description):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f'pct set {vmid} --description "{description}"'
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Tags setzen
-# -------------------------------------------------
-
-def set_tags(server, vmid, tags):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f'pct set {vmid} --tags "{tags}"'
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# DNS Server
-# -------------------------------------------------
-
-def set_dns(server, vmid, dns):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --nameserver {dns}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Search Domain
-# -------------------------------------------------
-
-def set_searchdomain(server, vmid, domain):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --searchdomain {domain}"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Netzwerk ändern
-# -------------------------------------------------
-
-def set_network(server,
-                vmid,
-                bridge="vmbr0",
-                ip="dhcp",
-                gateway=None):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    command = (
-        f"pct set {vmid} "
-        f"--net0 name=eth0,bridge={bridge},ip={ip}"
-    )
-
-    if gateway:
-        command += f",gw={gateway}"
-
-    result = ssh.execute(command)
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Autostart aktivieren
-# -------------------------------------------------
-
-def enable_autostart(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --onboot 1"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Autostart deaktivieren
-# -------------------------------------------------
-
-def disable_autostart(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --onboot 0"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Firewall aktivieren
-# -------------------------------------------------
-
-def firewall_enable(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --features firewall=1"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# Firewall deaktivieren
-# -------------------------------------------------
-
-def firewall_disable(server, vmid):
-
-    ssh = SSHClient(server)
-
-    ssh.connect()
-
-    result = ssh.execute(
-        f"pct set {vmid} --features firewall=0"
-    )
-
-    ssh.close()
-
-    return result
-
-
-# -------------------------------------------------
-# CPU Auslastung
-# -------------------------------------------------
-
-def cpu_usage(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "top -bn1 | head -5"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# RAM Auslastung
-# -------------------------------------------------
-
-def memory_usage(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "free -h"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Speicherbelegung
-# -------------------------------------------------
-
-def disk_usage(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "df -h"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Uptime
-# -------------------------------------------------
-
-def uptime(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "uptime"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# IP-Adresse
-# -------------------------------------------------
-
-def ip_address(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "hostname -I"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Betriebssystem
-# -------------------------------------------------
-
-def os_release(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "cat /etc/os-release"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Kernel
-# -------------------------------------------------
-
-def kernel(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "uname -r"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Load Average
-# -------------------------------------------------
-
-def load(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "cat /proc/loadavg"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Prozesse
-# -------------------------------------------------
-
-def processes(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "ps aux"
-    )["stdout"]
-
-
-# -------------------------------------------------
-# Neustart erforderlich?
-# -------------------------------------------------
-
-def reboot_required(server, vmid):
-
-    return exec(
-        server,
-        vmid,
-        "test -f /run/reboot-required && echo YES || echo NO"
-    )["stdout"] == "YES"
-
-
-# -------------------------------------------------
-# Container Informationen
-# -------------------------------------------------
-
-def info(server, vmid):
+def host_info(server):
 
     return {
-        "status": status_id(server, vmid),
-        "config": config(server, vmid),
-        "cpu": cpu_usage(server, vmid),
-        "memory": memory_usage(server, vmid),
-        "disk": disk_usage(server, vmid),
-        "uptime": uptime(server, vmid),
-        "ip": ip_address(server, vmid),
-        "os": os_release(server, vmid),
-        "kernel": kernel(server, vmid)
+        "version": version(server),
+        "templates": templates(server),
+        "containers": names(server)
+    }
+
+
+# -------------------------------------------------
+# Gesamtübersicht
+# -------------------------------------------------
+
+def overview(server):
+
+    return {
+        "containers": list(server),
+        "templates": templates(server),
+        "host": host_info(server)
     }
