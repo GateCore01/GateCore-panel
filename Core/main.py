@@ -261,6 +261,10 @@ app.mount(
     name="i18n"
 )
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse(BASE_DIR / "static" / "favicon.ico")
+
 # -------------------------------------------------
 # Login
 # -------------------------------------------------
