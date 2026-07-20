@@ -1,577 +1,153 @@
-// -------------------------------------------------
-// GateCore
-// storage-details.js
-// Teil 1
-// -------------------------------------------------
-
 document.addEventListener("DOMContentLoaded", () => {
-
-    setupLogout();
-
     loadPool();
-
+    loadDisks();
+    loadDatasets();
 });
-
-// -------------------------------------------------
-// Logout
-// -------------------------------------------------
-
-function setupLogout() {
-
-    const button =
-        document.getElementById("logoutButton");
-
-    if (!button)
-        return;
-
-    button.addEventListener("click", logout);
-
-}
-
-async function logout() {
-
-    try {
-
-        await fetch("/api/logout", {
-
-            method: "POST"
-
-        });
-
-    }
-
-    catch (e) {}
-
-    window.location = "/";
-
-}
-
-// -------------------------------------------------
-// Pool aus URL lesen
-// -------------------------------------------------
 
 function getPool() {
-
-    const params =
-        new URLSearchParams(window.location.search);
-
+    const params = new URLSearchParams(window.location.search);
     return params.get("pool");
-
 }
-
-// -------------------------------------------------
-// Poolinformationen laden
-// -------------------------------------------------
 
 async function loadPool() {
-
     const pool = getPool();
-
     if (!pool) {
-
-        showError(
-            "Kein Pool angegeben."
-        );
-
+        document.getElementById("status").innerHTML = "Kein Pool angegeben.";
         return;
-
     }
-
     try {
-
-        const response =
-            await fetch(
-
-                "/api/storage/details/" +
-                encodeURIComponent(pool)
-
-            );
-
-        const data =
-            await response.json();
-
+        const response = await fetch("/api/storage/details/" + encodeURIComponent(pool));
+        const data = await response.json();
         fillGeneral(data);
-
         fillProperties(data);
-
         fillUsage(data);
-
-    }
-
-    catch (error) {
-
+        translatePage();
+    } catch (error) {
         console.error(error);
-
-        showError(
-            "Pool konnte nicht geladen werden."
-        );
-
+        document.getElementById("status").innerHTML = "Pool konnte nicht geladen werden.";
     }
-
 }
-
-// -------------------------------------------------
-// Allgemeine Informationen
-// -------------------------------------------------
 
 function fillGeneral(data) {
-
     setText("poolName", data.name);
-
     setText("poolType", data.type);
-
     setText("poolStatus", data.status);
-
     setText("poolSize", data.size);
-
     setText("poolUsed", data.used);
-
     setText("poolFree", data.free);
-
     setText("poolHealth", data.health);
-
-    setText("poolGuid", data.guid);
-
     setText("poolVersion", data.version);
-
-    setText("poolHost", data.server);
-
+    setText("serverName", data.server);
 }
-
-// -------------------------------------------------
-// Eigenschaften
-// -------------------------------------------------
 
 function fillProperties(data) {
-
-    setText(
-        "compression",
-        data.compression
-    );
-
-    setText(
-        "atime",
-        data.atime
-    );
-
-    setText(
-        "autotrim",
-        data.autotrim
-    );
-
-    setText(
-        "ashift",
-        data.ashift
-    );
-
-    setText(
-        "recordsize",
-        data.recordsize
-    );
-
-    setText(
-        "mountpoint",
-        data.mountpoint
-    );
-
-    setText(
-        "readonly",
-        data.readonly
-    );
-
-    setText(
-        "dedup",
-        data.dedup
-    );
-
+    setText("poolCompression", data.compression);
+    setText("poolAtime", data.atime);
+    setText("poolAutotrim", data.autotrim);
 }
-
-// -------------------------------------------------
-// Speicherbelegung
-// -------------------------------------------------
 
 function fillUsage(data) {
-
-    const percent =
-        parseFloat(data.usage);
-
-    setText(
-        "usagePercent",
-        percent + " %"
-    );
-
-    const bar =
-        document.getElementById("usageBar");
-
-    if (bar) {
-
-        bar.style.width =
-            percent + "%";
-
-        if (percent < 60) {
-
-            bar.style.background =
-                "#198754";
-
-        }
-
-        else if (percent < 85) {
-
-            bar.style.background =
-                "#ffc107";
-
-        }
-
-        else {
-
-            bar.style.background =
-                "#dc3545";
-
-        }
-
-    }
-
+    setText("poolUsage", data.usage + " %");
+    setText("poolFragmentation", data.fragmentation);
+    setText("poolDedup", data.dedup);
 }
-
-// -------------------------------------------------
-// Text setzen
-// -------------------------------------------------
 
 function setText(id, value) {
-
-    const element =
-        document.getElementById(id);
-
-    if (!element)
-        return;
-
-    element.textContent =
-        value ?? "-";
-
+    const el = document.getElementById(id);
+    if (el) el.textContent = value ?? "-";
 }
-
-// -------------------------------------------------
-// Fehler
-// -------------------------------------------------
-
-function showError(text) {
-
-    const status =
-        document.getElementById("status");
-
-    if (!status)
-        return;
-
-    status.className =
-        "status-error";
-
-    status.innerHTML = text;
-
-}
-
-// -------------------------------------------------
-// Festplatten laden
-// -------------------------------------------------
 
 async function loadDisks() {
-
     const pool = getPool();
-
-    const tbody =
-        document.getElementById("diskBody");
-
-    if (!tbody)
-        return;
-
-    tbody.innerHTML = "";
-
+    const tbody = document.getElementById("diskBody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="loading-spinner"></div></td></tr>`;
     try {
-
-        const response =
-            await fetch(
-                "/api/storage/disks/" +
-                encodeURIComponent(pool)
-            );
-
-        const disks =
-            await response.json();
-
+        const response = await fetch("/api/storage/disks/" + encodeURIComponent(pool));
+        const disks = await response.json();
+        tbody.innerHTML = "";
         if (disks.length === 0) {
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="empty-row">
-                        Keine Laufwerke vorhanden.
-                    </td>
-                </tr>
-            `;
-
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-row" data-i18n="storage.no_disks_found">Keine Laufwerke vorhanden.</td></tr>`;
+            translatePage();
             return;
-
         }
-
         disks.forEach(disk => {
-
             tbody.innerHTML += `
-
             <tr>
-
                 <td>${disk.device}</td>
-
-                <td>${disk.model}</td>
-
-                <td>${disk.size}</td>
-
-                <td>${disk.status}</td>
-
                 <td>${disk.serial}</td>
-
-            </tr>
-
-            `;
-
+                <td>${disk.model}</td>
+                <td>${disk.size}</td>
+                <td>${disk.status}</td>
+                <td>${disk.temperature}</td>
+                <td><button class="btn-test" data-i18n="storage.smart" onclick="smartDisk('${disk.device}')">SMART</button></td>
+            </tr>`;
         });
-
-    }
-
-    catch (error) {
-
+        translatePage();
+    } catch (error) {
         console.error(error);
-
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-row">Fehler beim Laden der Festplatten.</td></tr>`;
     }
-
 }
-
-// -------------------------------------------------
-// Datasets laden
-// -------------------------------------------------
 
 async function loadDatasets() {
-
     const pool = getPool();
-
-    const tbody =
-        document.getElementById("datasetBody");
-
-    if (!tbody)
-        return;
-
-    tbody.innerHTML = "";
-
+    const tbody = document.getElementById("datasetBody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="7"><div class="loading-spinner"></div></td></tr>`;
     try {
-
-        const response =
-            await fetch(
-                "/api/storage/datasets/" +
-                encodeURIComponent(pool)
-            );
-
-        const datasets =
-            await response.json();
-
+        const response = await fetch("/api/storage/datasets/" + encodeURIComponent(pool));
+        const datasets = await response.json();
+        tbody.innerHTML = "";
         if (datasets.length === 0) {
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="5" class="empty-row">
-                        Keine Datasets vorhanden.
-                    </td>
-                </tr>
-            `;
-
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-row" data-i18n="storage.no_datasets">Keine Datensätze vorhanden.</td></tr>`;
+            translatePage();
             return;
-
         }
-
-        datasets.forEach(dataset => {
-
+        datasets.forEach(ds => {
             tbody.innerHTML += `
-
             <tr>
-
-                <td>${dataset.name}</td>
-
-                <td>${dataset.used}</td>
-
-                <td>${dataset.available}</td>
-
-                <td>${dataset.mountpoint}</td>
-
-                <td>${dataset.compression}</td>
-
-            </tr>
-
-            `;
-
+                <td>${ds.name}</td>
+                <td>${ds.mountpoint}</td>
+                <td>${ds.compression}</td>
+                <td>${ds.size}</td>
+                <td>${ds.used}</td>
+                <td>${ds.free}</td>
+                <td><button class="btn-edit" data-i18n="button.edit" onclick="editDataset('${ds.name}')">Bearbeiten</button></td>
+            </tr>`;
         });
-
-    }
-
-    catch (error) {
-
+        translatePage();
+    } catch (error) {
         console.error(error);
-
+        tbody.innerHTML = `<tr><td colspan="7" class="empty-row">Fehler beim Laden der Datensätze.</td></tr>`;
     }
-
 }
 
-// -------------------------------------------------
-// Pool exportieren
-// -------------------------------------------------
-
-async function exportPool() {
-
-    if (!confirm("Pool exportieren?"))
-        return;
-
-    const pool = getPool();
-
-    const response =
-        await fetch(
-
-            "/api/storage/export",
-
-            {
-
-                method: "POST",
-
-                headers: {
-
-                    "Content-Type":"application/json"
-
-                },
-
-                body: JSON.stringify({
-
-                    pool: pool
-
-                })
-
-            }
-
-        );
-
-    const result =
-        await response.json();
-
-    alert(result.message);
-
+function editDataset(name) {
+    alert("Dataset " + name + " bearbeiten folgt später.");
 }
 
-// -------------------------------------------------
-// Scrub starten
-// -------------------------------------------------
-
-function startScrub() {
-
-    window.location =
-        "/panel/storage/scrub?pool=" +
-        encodeURIComponent(getPool());
-
+function smartDisk(disk) {
+    window.location = "/panel/storage/smart?disk=" + encodeURIComponent(disk);
 }
 
-// -------------------------------------------------
-// SMART
-// -------------------------------------------------
-
-function openSmart() {
-
-    window.location =
-        "/panel/storage/smart?pool=" +
-        encodeURIComponent(getPool());
-
-}
-
-// -------------------------------------------------
-// Snapshots
-// -------------------------------------------------
-
-function openSnapshots() {
-
-    window.location =
-        "/panel/storage/snapshots?pool=" +
-        encodeURIComponent(getPool());
-
-}
-
-// -------------------------------------------------
-// Bearbeiten
-// -------------------------------------------------
-
-function editPool() {
-
-    window.location =
-        "/panel/storage/edit?pool=" +
-        encodeURIComponent(getPool());
-
-}
-
-// -------------------------------------------------
-// Aktualisieren
-// -------------------------------------------------
-
-async function refreshPool() {
-
-    await loadPool();
-
-    await loadDisks();
-
-    await loadDatasets();
-
-}
-
-// -------------------------------------------------
-// Buttons verbinden
-// -------------------------------------------------
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    loadDisks();
-
-    loadDatasets();
-
-    refreshPool();
-
-    const exportButton =
-        document.getElementById("exportButton");
-
-    if (exportButton)
-        exportButton.onclick = exportPool;
-
-    const scrubButton =
-        document.getElementById("scrubButton");
-
-    if (scrubButton)
-        scrubButton.onclick = startScrub;
-
-    const smartButton =
-        document.getElementById("smartButton");
-
-    if (smartButton)
-        smartButton.onclick = openSmart;
-
-    const snapshotButton =
-        document.getElementById("snapshotButton");
-
-    if (snapshotButton)
-        snapshotButton.onclick = openSnapshots;
-
-    const editButton =
-        document.getElementById("editButton");
-
-    if (editButton)
-        editButton.onclick = editPool;
-
-    const refreshButton =
-        document.getElementById("refreshButton");
-
-    if (refreshButton)
-        refreshButton.onclick = refreshPool;
-
+document.getElementById("refreshButton")?.addEventListener("click", () => { loadPool(); loadDisks(); loadDatasets(); });
+document.getElementById("snapshotButton")?.addEventListener("click", () => {
+    window.location = "/panel/storage/snapshots?pool=" + encodeURIComponent(getPool());
 });
-
-// -------------------------------------------------
-// Automatische Aktualisierung
-// -------------------------------------------------
-
-setInterval(refreshPool, 15000);
+document.getElementById("scrubButton")?.addEventListener("click", () => {
+    window.location = "/panel/storage/scrub?pool=" + encodeURIComponent(getPool());
+});
+document.getElementById("smartButton")?.addEventListener("click", () => {
+    window.location = "/panel/storage/smart?pool=" + encodeURIComponent(getPool());
+});
+document.getElementById("editButton")?.addEventListener("click", () => {
+    window.location = "/panel/storage/edit?pool=" + encodeURIComponent(getPool());
+});
+document.getElementById("deleteButton")?.addEventListener("click", async () => {
+    if (!confirm("Pool wirklich löschen?")) return;
+    const response = await fetch("/api/storage/delete/" + encodeURIComponent(getPool()), { method: "DELETE" });
+    const result = await response.json();
+    alert(result.message);
+    if (result.success) window.location = "/panel/storage";
+});

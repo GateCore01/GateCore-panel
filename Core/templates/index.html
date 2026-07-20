@@ -3,53 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login GateCore-Panel</title>
+    <title data-i18n="login.title">Login GateCore-Panel</title>
     <link rel="stylesheet" href="/css/login.css">
+    <script src="/js/i18n.js" defer></script>
+    <script src="/js/login.js" defer></script>
 </head>
 <body>
-
-<div class="login-page">
-
-    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
-
-    <div class="login-container">
-        <h1>Login GateCore-Panel</h1>
-
-        <form id="loginForm">
-
-            <div class="form-group">
-                <label for="username">Benutzername</label>
-                <input
-                    type="text"
-                    id="username"
-                    name="username"
-                    autocomplete="username"
-                    required>
-            </div>
-
-            <div class="form-group">
-                <label for="password">Passwort</label>
-                <input
-                    type="password"
-                    id="password"
-                    name="password"
-                    autocomplete="current-password"
-                    required>
-            </div>
-
-            <button type="submit">Anmelden</button>
-
-        </form>
+    <div class="login-page">
+        <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+        <div class="login-container">
+            <h1 data-i18n="login.title">Login GateCore-Panel</h1>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="username" data-i18n="login.username">Benutzername</label>
+                    <input type="text" id="username" name="username" autocomplete="username" required
+                           data-i18n-placeholder="login.username">
+                </div>
+                <div class="form-group">
+                    <label for="password" data-i18n="login.password">Passwort</label>
+                    <input type="password" id="password" name="password" autocomplete="current-password" required
+                           data-i18n-placeholder="login.password">
+                </div>
+                <button type="submit" data-i18n="login.submit">Anmelden</button>
+            </form>
+        </div>
     </div>
-
-</div>
-
-<dialog id="errorDialog">
-    <p id="errorText">Login fehlgeschlagen.</p>
-    <button id="closeDialog">Schließen</button>
-</dialog>
-
-<script src="/js/login.js"></script>
-
+    <dialog id="errorDialog">
+        <p id="errorText" data-i18n="login.error">Login fehlgeschlagen.</p>
+        <button id="closeDialog" data-i18n="button.close">Schließen</button>
+    </dialog>
 </body>
 </html>

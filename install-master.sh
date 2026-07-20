@@ -155,6 +155,9 @@ systemctl enable gatecore-panel.service
 # Start the GateCore panel service
 systemctl start gatecore-panel.service
 
+# Delete the temporary installation directory
+rm -rf /tmp/gatecore
+
 # Print completion message
 echo "Installation complete. The GateCore panel is now running and accessible on port 8000."
 echo "You can manage the service using: sudo systemctl [start|stop|restart|status] gatecore-panel.service"

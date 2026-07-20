@@ -1,375 +1,163 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>ZFS Pool erstellen</title>
-
+    <title data-i18n="storage.add_pool_title">ZFS Pool erstellen</title>
     <link rel="stylesheet" href="/css/panel.css">
+    <script src="/js/i18n.js" defer></script>
     <script src="/js/auth.js" defer></script>
     <script src="/js/storage/storage-add.js" defer></script>
-
 </head>
-
 <body>
 
 <div class="sidebar">
-
-    <img src="/svg/gati.svg"
-         alt="GateCore Logo"
-         class="header-svg-gati">
-
+    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
     <h2>GateCore-Panel</h2>
-
     <ul>
-
-        <li><a href="/panel">Dashboard</a></li>
-        <li><a href="/panel/lxc">LXC</a></li>
-        <li><a href="/panel/servers">Server</a></li>
-        <li><a href="/panel/users">Benutzer</a></li>
-        <li><a href="/panel/logs">Logs</a></li>
-        <li><a href="/panel/backup">Backup</a></li>
-        <li><a href="/panel/storage">Speicher</a></li>
-        <li><a href="/panel/settings">Einstellungen</a></li>
-
+        <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
+        <li><a href="/panel/lxc" data-i18n="sidebar.lxc">LXC</a></li>
+        <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
+        <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
+        <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
+        <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
+        <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
+        <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
     </ul>
-
 </div>
 
 <div class="taskbar-oben">
-
     <div class="taskbar-oben-left">
-
-        <h1>ZFS Pool erstellen</h1>
-
+        <h1 data-i18n="storage.add_pool_title">ZFS Pool erstellen</h1>
     </div>
-
     <div class="taskbar-oben-right">
-
-        <button onclick="window.location='/panel/storage'">
-
-            Zurück
-
-        </button>
-
-        <button id="logoutButton">
-
-            Abmelden
-
-        </button>
-
+        <button onclick="window.location='/panel/storage'" data-i18n="button.back">Zurück</button>
+        <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
     </div>
-
 </div>
 
 <div class="statistiken">
-
     <div class="form-card">
-
-        <h2>Neuen ZFS Pool erstellen</h2>
-
+        <h2 data-i18n="storage.create_new_pool">Neuen ZFS Pool erstellen</h2>
         <form id="createPoolForm">
-
             <div class="form-group">
-
-                <label>Server</label>
-
-                <select id="server" required>
-
-                </select>
-
+                <label data-i18n="storage.server">Server</label>
+                <select id="server" required></select>
             </div>
-
             <div class="form-group">
-
-                <label>Poolname</label>
-
-                <input
-                    type="text"
-                    id="poolname"
-                    placeholder="tank"
-                    required>
-
+                <label data-i18n="storage.pool_name">Poolname</label>
+                <input type="text" id="poolname" placeholder="tank" required
+                       data-i18n-placeholder="storage.pool_name_placeholder">
             </div>
-
             <div class="form-group">
-
-                <label>ZFS Typ</label>
-
+                <label data-i18n="storage.zfs_type">ZFS Typ</label>
                 <select id="raid">
-
-                    <option value="mirror">
-
-                        Mirror (RAID1)
-
-                    </option>
-
-                    <option value="raidz">
-
-                        RAIDZ1
-
-                    </option>
-
-                    <option value="raidz2">
-
-                        RAIDZ2
-
-                    </option>
-
-                    <option value="raidz3">
-
-                        RAIDZ3
-
-                    </option>
-
-                    <option value="stripe">
-
-                        Stripe (RAID0)
-
-                    </option>
-
+                    <option value="mirror" data-i18n="storage.raid_mirror">Mirror (RAID1)</option>
+                    <option value="raidz" data-i18n="storage.raid_z1">RAIDZ1</option>
+                    <option value="raidz2" data-i18n="storage.raid_z2">RAIDZ2</option>
+                    <option value="raidz3" data-i18n="storage.raid_z3">RAIDZ3</option>
+                    <option value="stripe" data-i18n="storage.raid_stripe">Stripe (RAID0)</option>
                 </select>
-
             </div>
-
             <div class="form-group">
-
-                <label>Kompression</label>
-
+                <label data-i18n="storage.compression">Kompression</label>
                 <select id="compression">
-
-                    <option value="lz4">
-
-                        lz4 (Empfohlen)
-
-                    </option>
-
-                    <option value="zstd">
-
-                        zstd
-
-                    </option>
-
-                    <option value="gzip">
-
-                        gzip
-
-                    </option>
-
-                    <option value="off">
-
-                        Deaktiviert
-
-                    </option>
-
+                    <option value="lz4">lz4 (Empfohlen)</option>
+                    <option value="zstd">zstd</option>
+                    <option value="gzip">gzip</option>
+                    <option value="off" data-i18n="storage.disabled">Deaktiviert</option>
                 </select>
-
             </div>
-
             <div class="form-group">
-
-                <label>ashift</label>
-
+                <label data-i18n="storage.ashift">ashift</label>
                 <select id="ashift">
-
-                    <option value="12">
-
-                        12 (4K - Standard)
-
-                    </option>
-
-                    <option value="9">
-
-                        9 (512 Byte)
-
-                    </option>
-
-                    <option value="13">
-
-                        13 (8K)
-
-                    </option>
-
+                    <option value="12">12 (4K - Standard)</option>
+                    <option value="9">9 (512 Byte)</option>
+                    <option value="13">13 (8K)</option>
                 </select>
-
             </div>
-
             <div class="form-group">
-
-                <label>atime</label>
-
+                <label data-i18n="storage.atime">atime</label>
                 <select id="atime">
-
-                    <option value="off">
-
-                        Deaktiviert
-
-                    </option>
-
-                    <option value="on">
-
-                        Aktiviert
-
-                    </option>
-
+                    <option value="off" data-i18n="storage.disabled">Deaktiviert</option>
+                    <option value="on" data-i18n="storage.enabled">Aktiviert</option>
                 </select>
-
             </div>
-
             <div class="form-group">
-
-                <label>Autotrim</label>
-
+                <label data-i18n="storage.autotrim">Autotrim</label>
                 <select id="autotrim">
-
-                    <option value="on">
-
-                        Aktiviert
-
-                    </option>
-
-                    <option value="off">
-
-                        Deaktiviert
-
-                    </option>
-
+                    <option value="on" data-i18n="storage.enabled">Aktiviert</option>
+                    <option value="off" data-i18n="storage.disabled">Deaktiviert</option>
                 </select>
-
             </div>
-
             <div class="form-group">
-
-                <label>Verfügbare Festplatten</label>
-
+                <label data-i18n="storage.available_disks">Verfügbare Festplatten</label>
                 <table id="diskTable">
-
                     <thead>
-
-                    <tr>
-
-                        <th>Auswahl</th>
-                        <th>Gerät</th>
-                        <th>Größe</th>
-                        <th>Modell</th>
-                        <th>Status</th>
-
-                    </tr>
-
-                    </thead>
-
-                    <tbody id="diskBody">
-
                         <tr>
-
-                            <td colspan="5" class="empty-row">
-
-                                Es wurden keine Laufwerke gefunden.
-
-                            </td>
-
+                            <th data-i18n="storage.select">Auswahl</th>
+                            <th data-i18n="storage.device">Gerät</th>
+                            <th data-i18n="storage.size">Größe</th>
+                            <th data-i18n="storage.model">Modell</th>
+                            <th data-i18n="storage.status">Status</th>
                         </tr>
-
+                    </thead>
+                    <tbody id="diskBody">
+                        <tr>
+                            <td colspan="5" class="empty-row" data-i18n="storage.no_disks_found">Es wurden keine Laufwerke gefunden.</td>
+                        </tr>
                     </tbody>
-
                 </table>
-
             </div>
-
             <div class="button-row">
-
-                <button type="submit">
-
-                    Pool erstellen
-
-                </button>
-
-                <button
-                    type="button"
-                    onclick="window.location='/panel/storage'">
-
-                    Abbrechen
-
-                </button>
-
+                <button type="submit" data-i18n="storage.create_pool">Pool erstellen</button>
+                <button type="button" onclick="window.location='/panel/storage'" data-i18n="button.back">Abbrechen</button>
             </div>
-
         </form>
-
         <div id="status"></div>
-
     </div>
 
     <br><br>
 
     <div class="table-card">
-
-        <h2>Hinweise</h2>
-
+        <h2 data-i18n="storage.hints">Hinweise</h2>
         <table>
-
             <thead>
-
-            <tr>
-
-                <th>ZFS Typ</th>
-                <th>Mindestens benötigte Laufwerke</th>
-                <th>Ausfallsicherheit</th>
-
-            </tr>
-
+                <tr>
+                    <th data-i18n="storage.zfs_type">ZFS Typ</th>
+                    <th data-i18n="storage.min_disks">Mindestens benötigte Laufwerke</th>
+                    <th data-i18n="storage.redundancy">Ausfallsicherheit</th>
+                </tr>
             </thead>
-
             <tbody>
-
-            <tr>
-
-                <td>Mirror</td>
-                <td>2</td>
-                <td>1 Laufwerk</td>
-
-            </tr>
-
-            <tr>
-
-                <td>RAIDZ1</td>
-                <td>3</td>
-                <td>1 Laufwerk</td>
-
-            </tr>
-
-            <tr>
-
-                <td>RAIDZ2</td>
-                <td>4</td>
-                <td>2 Laufwerke</td>
-
-            </tr>
-
-            <tr>
-
-                <td>RAIDZ3</td>
-                <td>5</td>
-                <td>3 Laufwerke</td>
-
-            </tr>
-
-            <tr>
-
-                <td>Stripe</td>
-                <td>2</td>
-                <td>Keine Redundanz</td>
-
-            </tr>
-
+                <tr>
+                    <td data-i18n="storage.raid_mirror">Mirror</td>
+                    <td>2</td>
+                    <td data-i18n="storage.redundancy_1_disk">1 Laufwerk</td>
+                </tr>
+                <tr>
+                    <td>RAIDZ1</td>
+                    <td>3</td>
+                    <td data-i18n="storage.redundancy_1_disk">1 Laufwerk</td>
+                </tr>
+                <tr>
+                    <td>RAIDZ2</td>
+                    <td>4</td>
+                    <td data-i18n="storage.redundancy_2_disks">2 Laufwerke</td>
+                </tr>
+                <tr>
+                    <td>RAIDZ3</td>
+                    <td>5</td>
+                    <td data-i18n="storage.redundancy_3_disks">3 Laufwerke</td>
+                </tr>
+                <tr>
+                    <td data-i18n="storage.raid_stripe">Stripe</td>
+                    <td>2</td>
+                    <td data-i18n="storage.redundancy_none">Keine Redundanz</td>
+                </tr>
             </tbody>
-
         </table>
-
     </div>
-
 </div>
 
 </body>

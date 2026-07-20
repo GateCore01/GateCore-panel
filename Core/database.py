@@ -1,3 +1,15 @@
+###########################################################################
+# File: Core/database.py
+# Database management for GateCore
+###########################################################################
+# License: MIT License
+# Created by: Korbinian Musch
+# Date: 2026-07-19
+# Communion: GateCore01
+############################################################################
+# !/bin/python
+
+# import dependencies 
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -17,64 +29,61 @@ SERVER_DB = DATABASE_DIR / "server.db"
 LXC_DB = DATABASE_DIR / "lxc.db"
 DB_PATH_LOGS = DATABASE_DIR / "logs.db"
 DB_PATH_STORAGE = DATABASE_DIR / "storage.db"
+DB_PATH_BACKUP = DATABASE_DIR / "backup.db"
 
 # -------------------------------------------------
 # Verbindungen
 # -------------------------------------------------
 
-
+# User Connection 
 def user_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Benutzer-/Session-Datenbank."""
     conn = sqlite3.connect(USERS_DB)
     conn.row_factory = sqlite3.Row
     return conn
 
-
+# Server Connection
 def server_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Server-Datenbank."""
     conn = sqlite3.connect(SERVER_DB)
     conn.row_factory = sqlite3.Row
     return conn
 
-
+# LXC Connection
 def lxc_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur LXC-Datenbank."""
     conn = sqlite3.connect(LXC_DB)
     conn.row_factory = sqlite3.Row
     return conn
 
-
+# Logs Connection
 def logs_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Log-Datenbank."""
     conn = sqlite3.connect(DB_PATH_LOGS)
     conn.row_factory = sqlite3.Row
     return conn
 
-
+# Storage Connection
 def storage_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Storage-Datenbank."""
     conn = sqlite3.connect(DB_PATH_STORAGE)
     conn.row_factory = sqlite3.Row
     return conn
 
-
 # -------------------------------------------------
-# Datenbank initialisieren
+# Datenbanken  initialisieren
 # -------------------------------------------------
-
-
 def init_database() -> None:
-    """Initialisiert alle für GateCore benötigten SQLite-Datenbanken."""
     create_users_database()
     create_server_database()
     create_lxc_database()
     create_logs_database()
     create_storage_database()
+    create_backup_database() 
 
 # -------------------------------------------------
 # users.db
 # -------------------------------------------------
-
 def create_users_database():
 
     conn = user_connection()
@@ -113,7 +122,6 @@ def create_users_database():
 # -------------------------------------------------
 # server.db
 # -------------------------------------------------
-
 def create_server_database() -> None:
     """Erstellt die Server-Tabelle für SSH-Verbindungen."""
     conn = server_connection()
@@ -138,11 +146,9 @@ def create_server_database() -> None:
     conn.commit()
     conn.close()
 
-
 # -------------------------------------------------
 # lxc.db
 # -------------------------------------------------
-
 def create_lxc_database() -> None:
     """Erstellt die LXC-Tabelle mit Spalten, die von den APIs abgefragt werden."""
     conn = lxc_connection()
@@ -206,8 +212,6 @@ def get_server(server_id: int) -> sqlite3.Row | None:
 # -------------------------------------------------
 # logs.db
 # -------------------------------------------------
-
-
 def create_logs_database() -> None:
     """Erstellt die Log-Tabelle."""
     conn = logs_connection()
@@ -229,7 +233,7 @@ def create_logs_database() -> None:
     conn.commit()
     conn.close()
 
-
+# Write Logs
 def write_log(
     server: str | None,
     username: str | None,
@@ -269,8 +273,6 @@ def write_log(
 # -------------------------------------------------
 # storage.db
 # -------------------------------------------------
-
-
 def create_storage_database() -> None:
     """Erstellt die Tabellen für Storage, Snapshots und SMART-History."""
     conn = storage_connection()
@@ -329,5 +331,31 @@ def create_storage_database() -> None:
         """
     )
 
+    conn.commit()
+    conn.close()
+
+# -------------------------------------------------
+# backup.db – Backup-Verwaltung
+# -------------------------------------------------
+def backup_connection() -> sqlite3.Connection:
+    """Erzeugt eine Verbindung zur Backup-Datenbank."""
+    conn = sqlite3.connect(DB_PATH_BACKUP)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+def create_backup_database() -> None:
+    """Erstellt die Backup-Tabelle."""
+    conn = backup_connection()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS backups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            server_id INTEGER NOT NULL,
+            path TEXT NOT NULL,
+            size TEXT,
+            status TEXT DEFAULT 'OK',
+            created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
     conn.commit()
     conn.close()

@@ -1,3 +1,15 @@
+###########################################################################
+# File: Core/main.py
+# Main Code from GateCore Linux Server Management
+###########################################################################
+# License: MIT License
+# Created by: Korbinian Musch
+# Date: 2026-07-20
+# Communion: GateCore01
+############################################################################
+# !/bin/python
+
+# import required modules
 import asyncio
 import json
 import urllib.request
@@ -25,6 +37,8 @@ from database import (
     storage_connection,
     user_connection,
     write_log,
+    backup_connection,
+    logs_connection,
 )
 from models import (
     AddLXC,
@@ -54,13 +68,21 @@ app = FastAPI(
 
 BASE_DIR = Path(__file__).resolve().parent
 
+# -------------------------------------------------
+# Template 
+# -------------------------------------------------
+
+# Template Repo
 TEMPLATE_REPO = (
     "https://git.code.sf.net/p/gatecore-template/container-templates"
 )
 
+# Template Path
 TEMPLATE_PATH = BASE_DIR / "cache" / "templates"
 
-
+# -------------------------------------------------
+# soucreforge Template Sync
+# -------------------------------------------------
 async def sync_github_templates():
 
     try:
@@ -177,7 +199,9 @@ async def sync_github_templates():
 
     conn.close()
 
-
+# -------------------------------------------------
+# Template Sync Loop(24h)
+# -------------------------------------------------
 async def sync_github_templates_loop() -> None:
     """Hält den GitHub-Template-Sync im Hintergrund laufend auf 24 Stunden."""
     await sync_github_templates()
@@ -231,6 +255,11 @@ app.mount(
     name="svg"
 )
 
+app.mount(
+    "/i18n",
+    StaticFiles(directory=BASE_DIR / "static" / "i18n"),
+    name="i18n"
+)
 
 # -------------------------------------------------
 # Login
@@ -265,6 +294,13 @@ async def panel_slash(user=Depends(require_login)):
     return FileResponse(
         BASE_DIR / "templates" / "panel" / "index.html"
     )
+
+# -------------------------------------------------
+# Backup
+# -------------------------------------------------
+@app.get("/panel/backup")
+async def backup_page(user=Depends(require_login)):
+    return FileResponse(BASE_DIR / "templates" / "panel" / "backup.html")
 
 # -------------------------------------------------
 # Benutzer
@@ -397,6 +433,7 @@ async def storage_scrub_page(user=Depends(require_login)):
 # API
 # -------------------------------------------------
 
+# LXC Count
 @app.get("/api/lxc/count")
 async def lxc_count(user=Depends(require_login)):
 
@@ -417,6 +454,7 @@ async def lxc_count(user=Depends(require_login)):
     finally:
         conn.close()
 
+# Server add
 @app.post("/api/server/add")
 async def add_server(
     data: AddServer,
@@ -465,6 +503,7 @@ async def add_server(
         conn.close()
 
 
+# Server Test
 @app.post("/api/server/test")
 async def test_server_connection(
     data: AddServer,
@@ -498,6 +537,7 @@ async def test_server_connection(
         }
 
 
+# Test Connextion by ID
 @app.post("/api/server/test/{server_id}")
 async def test_server_connection_by_id(
     server_id: int,
@@ -538,7 +578,7 @@ async def test_server_connection_by_id(
     finally:
         conn.close()
 
-
+# Server Delete 
 @app.delete("/api/server/delete/{server_id}")
 async def delete_server(
     server_id: int,
@@ -567,6 +607,7 @@ async def delete_server(
     finally:
         conn.close()
 
+# Server List 
 @app.get("/api/server/list")
 async def list_servers(user=Depends(require_login)):
 
@@ -614,7 +655,10 @@ async def list_servers(user=Depends(require_login)):
     finally:
 
         conn.close()
-        
+
+# -------------------------------------------------
+# Panel Seiten (Server)
+# -------------------------------------------------        
 @app.get("/panel/servers")
 async def servers_page(user=Depends(require_login)):
 
@@ -860,6 +904,7 @@ async def lxc_list(user=Depends(require_login)):
 
     return data
 
+# LXC Start 
 @app.post("/api/lxc/start/{id}")
 async def start_lxc(
     id: int,
@@ -875,6 +920,7 @@ async def start_lxc(
 
     }
     
+# LXC Stop
 @app.post("/api/lxc/stop/{id}")
 async def stop_lxc(
     id: int,
@@ -887,7 +933,8 @@ async def stop_lxc(
         "message": "Container gestoppt."
 
     }
-    
+
+# LXC Restart
 @app.post("/api/lxc/restart/{id}")
 async def restart_lxc(
     id: int,
@@ -901,6 +948,7 @@ async def restart_lxc(
 
     }
     
+#LXC Restart
 @app.delete("/api/lxc/delete/{id}")
 async def delete_lxc(
     id: int,
@@ -928,6 +976,7 @@ async def delete_lxc(
 
     }
     
+# LXC Add 
 @app.post("/api/lxc/add")
 async def add_lxc(
     data: AddLXC,
@@ -1004,7 +1053,8 @@ async def add_lxc(
         "message": "Container gespeichert."
 
     }
-    
+
+# LXC Templates
 @app.get("/api/lxc/templates")
 async def lxc_templates(user=Depends(require_login)):
 
@@ -1032,7 +1082,7 @@ async def lxc_templates(user=Depends(require_login)):
         for row in rows
     ]
 
-
+# Server Select
 @app.get("/api/server/select")
 async def server_select(user=Depends(require_login)):
 
@@ -1071,6 +1121,8 @@ async def server_select(user=Depends(require_login)):
 # -------------------------------------------------
 # Storage API
 # -------------------------------------------------
+
+# Storage add
 @app.post("/api/storage/add")
 async def storage_add(
     data: CreateStorage,
@@ -1111,7 +1163,8 @@ async def storage_add(
         "success": True,
         "message": "Speicher angelegt."
     }
-    
+
+# Storage List
 @app.get("/api/storage/list")
 async def storage_list(
     user=Depends(require_login)
@@ -1134,6 +1187,7 @@ async def storage_list(
         for row in rows
     ]
     
+# Storage Details 
 @app.get("/api/storage/details/{pool}")
 async def storage_details(
     pool: str,
@@ -1159,6 +1213,7 @@ async def storage_details(
 
     return dict(row)
 
+# Storage Update 
 @app.put("/api/storage/update")
 async def storage_update(
     data: UpdateStorage,
@@ -1198,6 +1253,7 @@ async def storage_update(
         "message": "Gespeichert."
     }
     
+# Storage Delete
 @app.delete("/api/storage/delete/{pool}")
 async def storage_delete(
     pool: str,
@@ -1223,6 +1279,7 @@ async def storage_delete(
         "message": "Pool gelöscht."
     }
     
+# Storage Smart 
 @app.get("/api/storage/smart/{disk}")
 async def storage_smart(
     disk: str,
@@ -1231,6 +1288,7 @@ async def storage_smart(
 
     return {}
 
+# Storage Smart Attributes
 @app.get("/api/storage/smart/attributes/{disk}")
 async def storage_smart_attributes(
     disk: str,
@@ -1239,6 +1297,7 @@ async def storage_smart_attributes(
 
     return []
 
+# Storage Smart Log
 @app.get("/api/storage/smart/log/{disk}")
 async def storage_smart_log(
     disk: str,
@@ -1248,7 +1307,8 @@ async def storage_smart_log(
     return {
         "log": ""
     }
-    
+
+# Storage Smart Test  
 @app.post("/api/storage/smart/test")
 async def storage_smart_test(
     data: StorageAction,
@@ -1259,7 +1319,8 @@ async def storage_smart_test(
         "success": True,
         "message": "SMART-Test gestartet."
     }
-    
+
+# Storage Scrub    
 @app.get("/api/storage/scrub/{pool}")
 async def storage_scrub(
     pool: str,
@@ -1268,6 +1329,7 @@ async def storage_scrub(
 
     return {}
 
+# Storage Scrub Start
 @app.post("/api/storage/scrub/start")
 async def storage_scrub_start(
     data: StorageAction,
@@ -1279,6 +1341,7 @@ async def storage_scrub_start(
         "message": "Scrub gestartet."
     }
     
+# Storage Scrub Stop 
 @app.post("/api/storage/scrub/stop")
 async def storage_scrub_stop(
     data: StorageAction,
@@ -1290,6 +1353,7 @@ async def storage_scrub_stop(
         "message": "Scrub gestoppt."
     }
     
+# Storage Snapshots
 @app.get("/api/storage/snapshots/{pool}")
 async def snapshot_list(
     pool: str,
@@ -1298,6 +1362,7 @@ async def snapshot_list(
 
     return []
 
+# Storage Snapshots Create
 @app.post("/api/storage/snapshot/create")
 async def snapshot_create(
     data: SnapshotCreate,
@@ -1309,6 +1374,7 @@ async def snapshot_create(
         "message": "Snapshot erstellt."
     }
     
+# Storage Snapshots Rename
 @app.put("/api/storage/snapshot/rename")
 async def snapshot_rename(
     data: SnapshotRename,
@@ -1320,6 +1386,7 @@ async def snapshot_rename(
         "message": "Snapshot umbenannt."
     }
     
+# Storage Snapshots Delete
 @app.delete("/api/storage/snapshot/delete")
 async def snapshot_delete(
     data: StorageAction,
@@ -1331,6 +1398,7 @@ async def snapshot_delete(
         "message": "Snapshot gelöscht."
     }
     
+# Storage Snapshots Rollback
 @app.post("/api/storage/snapshot/rollback")
 async def snapshot_rollback(
     data: StorageAction,
@@ -1342,6 +1410,7 @@ async def snapshot_rollback(
         "message": "Rollback erfolgreich."
     }
     
+# Storage Snapshots Clone
 @app.post("/api/storage/snapshot/clone")
 async def snapshot_clone(
     data: SnapshotClone,
@@ -1352,3 +1421,284 @@ async def snapshot_clone(
         "success": True,
         "message": "Snapshot geklont."
     }
+
+# -------------------------------------------------
+# Storage – Disks auflisten
+# -------------------------------------------------
+@app.get("/api/storage/disks")
+async def storage_disks_all(user=Depends(require_login)):
+    """Listet alle Festplatten aller Server auf."""
+    conn = server_connection()
+    servers = conn.execute("SELECT id, name, host, port, username, password, private_key FROM servers").fetchall()
+    conn.close()
+    
+    result = []
+    for server in servers:
+        try:
+            with SSHClient(dict(server)) as ssh:
+                # lsblk im JSON-Format abfragen
+                cmd = "lsblk -J -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,SERIAL"
+                out = ssh.execute(cmd)
+                data = json.loads(out["stdout"])
+                for disk in data.get("blockdevices", []):
+                    result.append({
+                        "server": server["name"],
+                        "device": disk.get("name", ""),
+                        "size": disk.get("size", ""),
+                        "type": disk.get("type", ""),
+                        "filesystem": disk.get("fstype", ""),
+                        "mountpoint": disk.get("mountpoint", ""),
+                        "model": disk.get("model", ""),
+                        "serial": disk.get("serial", ""),
+                        "status": "online"
+                    })
+        except Exception as e:
+            # Server nicht erreichbar
+            pass
+    return result
+
+@app.get("/api/storage/disks/{server_id}")
+async def storage_disks_by_server(server_id: int, user=Depends(require_login)):
+    """Listet Festplatten eines bestimmten Servers auf."""
+    conn = server_connection()
+    server = conn.execute(
+        "SELECT id, name, host, port, username, password, private_key FROM servers WHERE id=?",
+        (server_id,)
+    ).fetchone()
+    conn.close()
+    
+    if not server:
+        raise HTTPException(status_code=404, detail="Server nicht gefunden")
+    
+    result = []
+    try:
+        with SSHClient(dict(server)) as ssh:
+            cmd = "lsblk -J -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,SERIAL"
+            out = ssh.execute(cmd)
+            data = json.loads(out["stdout"])
+            for disk in data.get("blockdevices", []):
+                result.append({
+                    "device": disk.get("name", ""),
+                    "size": disk.get("size", ""),
+                    "type": disk.get("type", ""),
+                    "filesystem": disk.get("fstype", ""),
+                    "mountpoint": disk.get("mountpoint", ""),
+                    "model": disk.get("model", ""),
+                    "serial": disk.get("serial", ""),
+                    "status": "online"
+                })
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Fehler beim Abrufen der Festplatten: {e}")
+    
+    return result
+
+# -------------------------------------------------
+# Backup-API
+# -------------------------------------------------
+@app.get("/api/backup/list")
+async def backup_list(user=Depends(require_login)):
+    """Listet alle vorhandenen Backups auf – mit Server-Namen aus server.db."""
+    conn_b = backup_connection()
+    conn_s = server_connection()
+    
+    try:
+        # Alle Backups laden
+        backups = conn_b.execute("SELECT * FROM backups ORDER BY created DESC").fetchall()
+        
+        # Server-Namen nachladen (separat, da in anderer DB)
+        result = []
+        for backup in backups:
+            server = conn_s.execute(
+                "SELECT name FROM servers WHERE id = ?",
+                (backup["server_id"],)
+            ).fetchone()
+            
+            result.append({
+                "id": backup["id"],
+                "name": backup["name"],
+                "server": server["name"] if server else "Unbekannt",
+                "path": backup["path"],
+                "size": backup["size"] or "-",
+                "status": backup["status"],
+                "date": backup["created"]
+            })
+        
+        return result
+    finally:
+        conn_b.close()
+        conn_s.close()
+
+@app.post("/api/backup/create")
+async def backup_create(user=Depends(require_login)):
+    """Erstellt ein neues Backup aller Server/Container."""
+    conn = server_connection()
+    servers = conn.execute("SELECT * FROM servers").fetchall()
+    conn.close()
+    
+    if not servers:
+        return {"success": False, "message": "Keine Server für Backups gefunden."}
+    
+    created = []
+    errors = []
+    
+    for server in servers:
+        try:
+            backup_name = f"backup_{server['name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tar.gz"
+            backup_path = f"/tmp/{backup_name}"
+            
+            with SSHClient(dict(server)) as ssh:
+                # Backup von wichtigen Verzeichnissen
+                result = ssh.execute(
+                    f"sudo tar -czf {backup_path} "
+                    f"/etc /var/log /home 2>/dev/null || "
+                    f"echo 'Backup created with warnings'"
+                )
+                
+                if result["stderr"] and "Backup created" not in result["stderr"]:
+                    raise Exception(result["stderr"])
+                
+                # Größe ermitteln
+                size_result = ssh.execute(f"ls -lh {backup_path} | awk '{{print $5}}'")
+                size = size_result["stdout"].strip() or "unknown"
+            
+            # In Datenbank speichern
+            conn_b = backup_connection()
+            conn_b.execute(
+                "INSERT INTO backups (name, server_id, path, size, status) VALUES (?, ?, ?, ?, ?)",
+                (backup_name, server["id"], backup_path, size, "OK")
+            )
+            conn_b.commit()
+            conn_b.close()
+            created.append(backup_name)
+            
+            # Log-Eintrag
+            write_log(server["name"], user.username, "INFO", "backup_create", f"Backup {backup_name} erstellt")
+            
+        except Exception as e:
+            errors.append(f"{server['name']}: {str(e)}")
+            write_log(server["name"], user.username, "ERROR", "backup_create", str(e))
+    
+    if created:
+        return {
+            "success": True,
+            "message": f"{len(created)} Backups erstellt: {', '.join(created)}" + 
+                      (f" (Fehler: {', '.join(errors)})" if errors else "")
+        }
+    else:
+        return {
+            "success": False,
+            "message": f"Keine Backups erstellt: {', '.join(errors)}"
+        }
+
+@app.post("/api/backup/restore/{backup_id}")
+async def backup_restore(backup_id: int, user=Depends(require_login)):
+    """Stellt ein Backup auf dem ursprünglichen Server wieder her."""
+    conn_b = backup_connection()
+    backup = conn_b.execute("SELECT * FROM backups WHERE id=?", (backup_id,)).fetchone()
+    conn_b.close()
+    
+    if not backup:
+        raise HTTPException(status_code=404, detail="Backup nicht gefunden")
+    
+    # Server laden
+    conn_s = server_connection()
+    server = conn_s.execute("SELECT * FROM servers WHERE id=?", (backup["server_id"],)).fetchone()
+    conn_s.close()
+    
+    if not server:
+        raise HTTPException(status_code=404, detail="Server nicht gefunden")
+    
+    try:
+        with SSHClient(dict(server)) as ssh:
+            # Prüfen ob Backup-Datei existiert
+            check = ssh.execute(f"test -f {backup['path']} && echo 'exists'")
+            if "exists" not in check["stdout"]:
+                raise Exception(f"Backup-Datei {backup['path']} nicht gefunden")
+            
+            # Backup wiederherstellen (Achtung: überschreibt Systemdateien!)
+            result = ssh.execute(f"sudo tar -xzf {backup['path']} -C / 2>/dev/null")
+            if result["stderr"]:
+                raise Exception(result["stderr"])
+        
+        write_log(server["name"], user.username, "INFO", "backup_restore", f"Backup {backup['name']} wiederhergestellt")
+        return {"success": True, "message": f"Backup {backup['name']} erfolgreich wiederhergestellt"}
+        
+    except Exception as e:
+        write_log(server["name"], user.username, "ERROR", "backup_restore", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/backup/delete/{backup_id}")
+async def backup_delete(backup_id: int, user=Depends(require_login)):
+    """Löscht ein Backup von der Festplatte und aus der Datenbank."""
+    conn_b = backup_connection()
+    backup = conn_b.execute("SELECT * FROM backups WHERE id=?", (backup_id,)).fetchone()
+    
+    if not backup:
+        conn_b.close()
+        raise HTTPException(status_code=404, detail="Backup nicht gefunden")
+    
+    server_name = "Unbekannt"
+    
+    # Server laden (für Logging und Löschen der Datei)
+    conn_s = server_connection()
+    server = conn_s.execute("SELECT * FROM servers WHERE id=?", (backup["server_id"],)).fetchone()
+    conn_s.close()
+    
+    if server:
+        server_name = server["name"]
+        try:
+            with SSHClient(dict(server)) as ssh:
+                ssh.execute(f"sudo rm -f {backup['path']}")
+        except Exception as e:
+            # Datei existiert vielleicht nicht mehr – ignorieren
+            pass
+    
+    # Aus Datenbank löschen
+    conn_b.execute("DELETE FROM backups WHERE id=?", (backup_id,))
+    conn_b.commit()
+    conn_b.close()
+    
+    write_log(server_name, user.username, "INFO", "backup_delete", f"Backup {backup['name']} gelöscht")
+    return {"success": True, "message": f"Backup {backup['name']} gelöscht"}
+
+# -------------------------------------------------
+# Logs API
+# -------------------------------------------------
+@app.get("/api/logs/list")
+async def logs_list(
+    level: str = "all",
+    server: str = "all",
+    user=Depends(require_login)
+):
+    """Gibt gefilterte Logs aus der Datenbank zurück."""
+    conn = logs_connection()
+    try:
+        query = "SELECT * FROM logs WHERE 1=1"
+        params = []
+        
+        if level != "all":
+            query += " AND level = ?"
+            params.append(level)
+        
+        if server != "all":
+            query += " AND server = ?"
+            params.append(server)
+        
+        query += " ORDER BY timestamp DESC LIMIT 1000"  # Begrenzung auf 1000 Einträge
+        
+        rows = conn.execute(query, params).fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+@app.delete("/api/logs/clear")
+async def logs_clear(user=Depends(require_login)):
+    """Löscht alle Logs aus der Datenbank."""
+    conn = logs_connection()
+    try:
+        conn.execute("DELETE FROM logs")
+        conn.commit()
+        write_log(None, user.username, "INFO", "logs_clear", "Alle Logs wurden gelöscht")
+        return {"success": True, "message": "Alle Logs gelöscht."}
+    finally:
+        conn.close()

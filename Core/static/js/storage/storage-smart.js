@@ -1,556 +1,125 @@
-// -------------------------------------------------
-// GateCore
-// storage-smart.js
-// Teil 1
-// -------------------------------------------------
-
 document.addEventListener("DOMContentLoaded", () => {
-
-    setupLogout();
-
-    loadSmart();
-
+    loadSMART();
 });
-
-// -------------------------------------------------
-// Logout
-// -------------------------------------------------
-
-function setupLogout() {
-
-    const button =
-        document.getElementById("logoutButton");
-
-    if (!button)
-        return;
-
-    button.addEventListener("click", logout);
-
-}
-
-async function logout() {
-
-    try {
-
-        await fetch("/api/logout", {
-
-            method: "POST"
-
-        });
-
-    }
-
-    catch (e) {}
-
-    window.location = "/";
-
-}
-
-// -------------------------------------------------
-// Laufwerk aus URL lesen
-// -------------------------------------------------
 
 function getDisk() {
-
-    const params =
-        new URLSearchParams(window.location.search);
-
+    const params = new URLSearchParams(window.location.search);
     return params.get("disk");
-
 }
 
-// -------------------------------------------------
-// SMART Daten laden
-// -------------------------------------------------
-
-async function loadSmart() {
-
+async function loadSMART() {
     const disk = getDisk();
-
     if (!disk) {
-
-        showError(
-            "Kein Laufwerk ausgewählt."
-        );
-
+        document.getElementById("status").innerHTML = "Kein Laufwerk ausgewählt.";
         return;
-
     }
-
     try {
-
-        const response =
-            await fetch(
-
-                "/api/storage/smart/" +
-                encodeURIComponent(disk)
-
-            );
-
-        const data =
-            await response.json();
-
+        const response = await fetch("/api/storage/smart/" + encodeURIComponent(disk));
+        const data = await response.json();
         fillGeneral(data);
-
         fillHealth(data);
-
-    }
-
-    catch (error) {
-
+        fillAttributes(data.attributes);
+        fillTests(data.tests);
+        translatePage();
+    } catch (error) {
         console.error(error);
-
-        showError(
-            "SMART-Daten konnten nicht geladen werden."
-        );
-
+        document.getElementById("status").innerHTML = "SMART-Daten konnten nicht geladen werden.";
     }
-
 }
-
-// -------------------------------------------------
-// Allgemeine Informationen
-// -------------------------------------------------
 
 function fillGeneral(data) {
-
-    setText("diskName", data.device);
-
-    setText("diskModel", data.model);
-
-    setText("diskSerial", data.serial);
-
-    setText("diskFirmware", data.firmware);
-
-    setText("diskCapacity", data.capacity);
-
-    setText("diskInterface", data.interface);
-
-    setText("diskRotation", data.rotation);
-
-    setText("diskPowerOn", data.power_on_hours);
-
-    setText("diskPowerCycle", data.power_cycles);
-
+    setText("serverName", data.server);
+    setText("deviceName", data.device);
+    setText("deviceModel", data.model);
+    setText("serialNumber", data.serial);
+    setText("firmwareVersion", data.firmware);
+    setText("deviceSize", data.capacity);
+    setText("deviceType", data.type);
+    setText("smartStatus", data.smart_status);
 }
-
-// -------------------------------------------------
-// SMART Status
-// -------------------------------------------------
 
 function fillHealth(data) {
-
-    setText("diskHealth", data.health);
-
-    setText(
-        "diskTemperature",
-        data.temperature + " °C"
-    );
-
-    setText(
-        "diskReallocated",
-        data.reallocated
-    );
-
-    setText(
-        "diskPending",
-        data.pending
-    );
-
-    setText(
-        "diskOffline",
-        data.offline
-    );
-
-    const badge =
-        document.getElementById("healthBadge");
-
-    if (!badge)
-        return;
-
-    badge.innerHTML =
-        data.health;
-
-    badge.className = "";
-
-    switch (data.health.toLowerCase()) {
-
-        case "healthy":
-
-        case "passed":
-
-        case "ok":
-
-            badge.classList.add(
-                "status-success"
-            );
-
-            break;
-
-        case "warning":
-
-            badge.classList.add(
-                "status-warning"
-            );
-
-            break;
-
-        default:
-
-            badge.classList.add(
-                "status-error"
-            );
-
-    }
-
-    updateTemperature(
-        data.temperature
-    );
-
+    setText("temperature", data.temperature + " °C");
+    setText("lifeRemaining", data.remaining_life);
+    setText("powerOnHours", data.power_on_hours);
+    setText("powerCycles", data.power_cycles);
+    setText("hostWrites", data.host_writes);
+    setText("hostReads", data.host_reads);
+    setText("wearLevel", data.wear_level);
 }
 
-// -------------------------------------------------
-// Temperaturanzeige
-// -------------------------------------------------
-
-function updateTemperature(temp) {
-
-    const bar =
-        document.getElementById(
-            "temperatureBar"
-        );
-
-    if (!bar)
+function fillAttributes(attrs) {
+    const tbody = document.getElementById("smartBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (!attrs || attrs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="empty-row" data-i18n="storage.no_smart_data">Keine SMART Daten vorhanden.</td></tr>`;
+        translatePage();
         return;
-
-    bar.style.width =
-        Math.min(temp, 100) + "%";
-
-    if (temp < 40) {
-
-        bar.style.background =
-            "#198754";
-
     }
-
-    else if (temp < 50) {
-
-        bar.style.background =
-            "#ffc107";
-
-    }
-
-    else {
-
-        bar.style.background =
-            "#dc3545";
-
-    }
-
+    attrs.forEach(attr => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${attr.id}</td>
+            <td>${attr.name}</td>
+            <td>${attr.current}</td>
+            <td>${attr.worst}</td>
+            <td>${attr.threshold}</td>
+            <td>${attr.raw}</td>
+        </tr>`;
+    });
+    translatePage();
 }
 
-// -------------------------------------------------
-// Text setzen
-// -------------------------------------------------
+function fillTests(tests) {
+    const tbody = document.getElementById("testBody");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+    if (!tests || tests.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="empty-row" data-i18n="storage.no_tests">Keine Tests vorhanden.</td></tr>`;
+        translatePage();
+        return;
+    }
+    tests.forEach(test => {
+        tbody.innerHTML += `
+        <tr>
+            <td>${test.type}</td>
+            <td>${test.status}</td>
+            <td>${test.progress}</td>
+            <td>${test.date}</td>
+        </tr>`;
+    });
+    translatePage();
+}
 
 function setText(id, value) {
-
-    const element =
-        document.getElementById(id);
-
-    if (!element)
-        return;
-
-    element.innerHTML =
-        value ?? "-";
-
+    const el = document.getElementById(id);
+    if (el) el.textContent = value ?? "-";
 }
 
-// -------------------------------------------------
-// Statusmeldungen
-// -------------------------------------------------
-
-function showSuccess(text) {
-
-    const status =
-        document.getElementById("status");
-
-    if (!status)
-        return;
-
-    status.className =
-        "status-success";
-
-    status.innerHTML =
-        text;
-
-}
-
-function showError(text) {
-
-    const status =
-        document.getElementById("status");
-
-    if (!status)
-        return;
-
-    status.className =
-        "status-error";
-
-    status.innerHTML =
-        text;
-
-}
-
-function clearStatus() {
-
-    const status =
-        document.getElementById("status");
-
-    if (!status)
-        return;
-
-    status.className = "";
-
-    status.innerHTML = "";
-
-}
-
-// -------------------------------------------------
-// SMART Attribute laden
-// -------------------------------------------------
-
-async function loadAttributes() {
-
+document.getElementById("shortTest")?.addEventListener("click", () => startTest("short"));
+document.getElementById("longTest")?.addEventListener("click", () => startTest("long"));
+document.getElementById("abortTest")?.addEventListener("click", async () => {
     const disk = getDisk();
-
-    const tbody =
-        document.getElementById("attributeBody");
-
-    if (!tbody)
-        return;
-
-    tbody.innerHTML = "";
-
-    try {
-
-        const response =
-            await fetch(
-
-                "/api/storage/smart/attributes/" +
-                encodeURIComponent(disk)
-
-            );
-
-        const attributes =
-            await response.json();
-
-        if (attributes.length === 0) {
-
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="empty-row">
-                        Keine SMART-Attribute vorhanden.
-                    </td>
-                </tr>
-            `;
-
-            return;
-
-        }
-
-        attributes.forEach(attr => {
-
-            tbody.innerHTML += `
-
-                <tr>
-
-                    <td>${attr.id}</td>
-
-                    <td>${attr.name}</td>
-
-                    <td>${attr.value}</td>
-
-                    <td>${attr.worst}</td>
-
-                    <td>${attr.threshold}</td>
-
-                    <td>${attr.raw}</td>
-
-                </tr>
-
-            `;
-
-        });
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-    }
-
-}
-
-// -------------------------------------------------
-// SMART Selbsttest starten
-// -------------------------------------------------
+    const response = await fetch("/api/storage/smart/abort", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disk })
+    });
+    const result = await response.json();
+    alert(result.message);
+    loadSMART();
+});
+document.getElementById("refreshSMART")?.addEventListener("click", loadSMART);
 
 async function startTest(type) {
-
-    if (!confirm("SMART-Test starten?"))
-        return;
-
-    try {
-
-        const response =
-            await fetch(
-
-                "/api/storage/smart/test",
-
-                {
-
-                    method: "POST",
-
-                    headers: {
-
-                        "Content-Type":
-                            "application/json"
-
-                    },
-
-                    body: JSON.stringify({
-
-                        disk: getDisk(),
-
-                        type: type
-
-                    })
-
-                }
-
-            );
-
-        const result =
-            await response.json();
-
-        if (result.success) {
-
-            showSuccess(result.message);
-
-        }
-
-        else {
-
-            showError(result.message);
-
-        }
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-    }
-
-}
-
-// -------------------------------------------------
-// SMART Log laden
-// -------------------------------------------------
-
-async function loadLog() {
-
     const disk = getDisk();
-
-    const log =
-        document.getElementById("smartLog");
-
-    if (!log)
-        return;
-
-    try {
-
-        const response =
-            await fetch(
-
-                "/api/storage/smart/log/" +
-                encodeURIComponent(disk)
-
-            );
-
-        const result =
-            await response.json();
-
-        log.value =
-            result.log;
-
-    }
-
-    catch (error) {
-
-        console.error(error);
-
-    }
-
+    const response = await fetch("/api/storage/smart/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ disk, type })
+    });
+    const result = await response.json();
+    alert(result.message);
+    loadSMART();
 }
-
-// -------------------------------------------------
-// Aktualisieren
-// -------------------------------------------------
-
-async function refreshSmart() {
-
-    await loadSmart();
-
-    await loadAttributes();
-
-    await loadLog();
-
-}
-
-// -------------------------------------------------
-// Buttons
-// -------------------------------------------------
-
-document.addEventListener("DOMContentLoaded", () => {
-
-    refreshSmart();
-
-    const shortButton =
-        document.getElementById("shortTestButton");
-
-    if (shortButton)
-        shortButton.onclick =
-            () => startTest("short");
-
-    const longButton =
-        document.getElementById("longTestButton");
-
-    if (longButton)
-        longButton.onclick =
-            () => startTest("long");
-
-    const conveyanceButton =
-        document.getElementById("conveyanceTestButton");
-
-    if (conveyanceButton)
-        conveyanceButton.onclick =
-            () => startTest("conveyance");
-
-    const refreshButton =
-        document.getElementById("refreshButton");
-
-    if (refreshButton)
-        refreshButton.onclick =
-            refreshSmart;
-
-});
-
-// -------------------------------------------------
-// Automatisch aktualisieren
-// -------------------------------------------------
-
-setInterval(refreshSmart, 15000);

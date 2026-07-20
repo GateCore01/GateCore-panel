@@ -1,3 +1,15 @@
+###########################################################################
+# File: Core/auth.py
+# Authentifizierungs- und Session-Management für GateCore.
+###########################################################################
+# License: MIT License
+# Created by: Korbinian Musch
+# Date: 2026-07-19
+# Communion: GateCore01
+############################################################################
+# !/bin/python
+
+# import the required modules
 import secrets
 import time
 import sqlite3

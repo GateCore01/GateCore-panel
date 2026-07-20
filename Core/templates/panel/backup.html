@@ -3,10 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="server.title">Server</title>
-    <script src="/js/i18n.js" defer></script>
-    <script src="/js/auth.js" defer></script>
+    <title data-i18n="backup.title">Backup Management</title>
     <link rel="stylesheet" href="/css/panel.css">
+    <script src="/js/i18n.js" defer></script>
+    <script src="/js/backup.js" defer></script>
+    <script src="/js/auth.js" defer></script>
 </head>
 <body>
 
@@ -27,30 +28,32 @@
 
 <div class="taskbar-oben">
     <div class="taskbar-oben-left">
-        <h1 data-i18n="server.title">Server</h1>
+        <h1 data-i18n="backup.title">Backup Management</h1>
     </div>
     <div class="taskbar-oben-right">
-        <button onclick="window.location='/panel/server_add'" data-i18n="button.add_server">+ Server</button>
-        <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        <button id="createBackupButton" data-i18n="backup.create">Create Backup</button>
+        <button id="refreshBackupButton" data-i18n="button.refresh">Refresh</button>
+        <button id="logoutButton" data-i18n="button.logout">Logout</button>
     </div>
 </div>
 
 <div class="statistiken">
     <div class="table-card">
-        <h2 data-i18n="server.registered">Registrierte Server</h2>
-        <table id="serverTable">
+        <h2 data-i18n="backup.list">Backup List</h2>
+        <table id="backupTable">
             <thead>
                 <tr>
-                    <th data-i18n="server.id">ID</th>
-                    <th data-i18n="server.name">Name</th>
-                    <th data-i18n="server.ip">IP-Adresse</th>
-                    <th data-i18n="server.port">Port</th>
-                    <th data-i18n="server.username">Benutzer</th>
-                    <th data-i18n="server.actions">Aktionen</th>
+                    <th data-i18n="backup.name">Name</th>
+                    <th data-i18n="backup.date">Date</th>
+                    <th data-i18n="backup.size">Size</th>
+                    <th data-i18n="backup.status">Status</th>
+                    <th data-i18n="backup.actions">Actions</th>
                 </tr>
             </thead>
-            <tbody id="serverBody">
-                <script src="/js/server.js" defer></script>
+            <tbody id="backupBody">
+                <tr>
+                    <td colspan="5" class="empty-row" data-i18n="backup.no_backups">No backups available.</td>
+                </tr>
             </tbody>
         </table>
     </div>
