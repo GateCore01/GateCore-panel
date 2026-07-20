@@ -89,8 +89,6 @@ def create_users_database():
 
             password TEXT NOT NULL,
 
-            role TEXT NOT NULL DEFAULT 'user',
-
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
         )

@@ -192,14 +192,13 @@ def cleanup_sessions() -> int:
 # --- Benutzer-Management ---
 
 # --- Benutzer erstellen ---
-def create_user(username: str, password: str, role: str) -> bool:
+def create_user(username: str, password: str) -> bool:
     """
     Erstellt einen neuen Benutzer in users.db.
     
     Args:
         username: Benutzername.
         password: Passwort (wird automatisch gehasht).
-        role: Rolle (z.B. 'Administrator', 'User').
     
     Returns:
         True wenn erfolgreich, False bei Duplikat.
@@ -218,10 +217,10 @@ def create_user(username: str, password: str, role: str) -> bool:
         conn.execute(
             """
             INSERT INTO users
-            (username,password,role)
+            (username,password)
             VALUES (?,?,?)
             """,
-            (username, hashed_pw, role)
+            (username, hashed_pw)
         )
         conn.commit()
         return True
@@ -297,7 +296,7 @@ def get_current_user(token: str) -> Optional[CurrentUser]:
             # Optional: Session hier auch löschen
             return None
         
-        return CurrentUser(username=user['username'], role=user['role'])
+        return CurrentUser(username=user['username'])
     finally:
         conn.close()
 
