@@ -28,10 +28,6 @@ DATABASE_SRC_DIR.mkdir(exist_ok=True)
 for file in glob.glob(os.path.join(DATABASE_SRC_DIR, "*")):
     if file not in glob.glob(os.path.join(DATABASE_DIR, "*")):
         shutil.copy(file,DATABASE_DIR)
-    else:
-        print("{} exists in {}".format(
-            file,os.path.join(os.path.split(DATABASE_DIR)[-2:])
-        ))
 
 def _connect_with_wal(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
