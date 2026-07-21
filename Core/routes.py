@@ -81,7 +81,7 @@ def user_page(user=Depends(require_login)):
 def server_page(user=Depends(require_login)):
     return FileResponse(BASE_DIR / "templates" / "panel" / "servers.html")
 
-@router.get("/panel/server/add")
+@router.get("/panel/server_add")
 def server_add_page(user=Depends(require_login)):
     return FileResponse(BASE_DIR / "templates" / "panel" / "server_add.html")
 

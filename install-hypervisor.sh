@@ -38,7 +38,7 @@ case "$OS" in
         echo "Detected Debian/Ubuntu system. Installing dependencies..."
         apt update
         apt upgrade -y
-        apt install -y lxc lxc-utils lxc-templates lxcfs uidmap bridge-utils vlan dnsmasq-base debootstrap rsync curl wget sudo openssh-server iptables nftables iproute2 bridge-utils smartmontools nvme-cli lvm2 mdadm parted xfsprogs btrfs-progs jq
+        apt install -y lxc lxc-templates lxcfs uidmap bridge-utils vlan dnsmasq-base debootstrap rsync curl wget sudo openssh-server iptables nftables iproute2 bridge-utils smartmontools nvme-cli lvm2 mdadm parted xfsprogs btrfs-progs jq
         ;;
 
     # Red Hat-based systems

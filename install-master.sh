@@ -38,7 +38,7 @@ case "$OS" in
         echo "Detected Debian-based system. Installing dependencies..."
         apt update
         apt upgrade -y
-        apt install -y python3 python3-pip python3-venv python3-dev build-essential git sqlite3 curl wget nano vim htop btop unzip zip openssl apache2 libapache2-mod-wsgi-py3 openssh-client openssh-server sudo acl cron systemd ethtool bridge-utils vlan ifupdown2 dnsutils net-tools iproute2 smartmontools nvme-cli lvm2 mdadm parted util-linux xfsprogs btrfs-progs zfsutils-linux rsync jq
+        apt install -y python3 python3-pip python3-venv python3-dev build-essential git sqlite3 curl wget nano vim htop btop unzip zip openssl apache2 libapache2-mod-wsgi-py3 openssh-client openssh-server sudo acl cron systemd ethtool bridge-utils vlan ifupdown2 dnsutils net-tools iproute2 smartmontools nvme-cli lvm2 mdadm parted util-linux xfsprogs btrfs-progs rsync jq
         ;;
 
     # Ubuntu systems
