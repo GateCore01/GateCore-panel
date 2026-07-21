@@ -81,15 +81,17 @@ esac
 # Create a dedicated user for the GateCore panel
 useradd -r -s /bin/false gatecore
 
+# Create necessary directories
+mkdir -p /opt/gatecore/panel
+mkdir -p /tmp/gatecore
+mkdir -p /opt/gatecore/panal/cache
+mkdir -p /opt/gatecore/panal/cache/templates
+
 # Clone the GateCore panel repository
 git clone https://github.com/GateCore01/GateCore-panel /tmp/gatecore/
 
 # Move the cloned repository to the installation directory
 mv /tmp/gatecore/Core/* /opt/gatecore/panel/
-
-# Create necessary directories
-mkdir -p /opt/gatecore/panel
-mkdir -p /tmp/gatecore
 
 # Set up Python virtual environment
 python3 -m venv /opt/gatecore/panel/venv

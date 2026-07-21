@@ -9,11 +9,11 @@
 ############################################################################
 # !/bin/python
 
-# import dependencies 
 import sqlite3
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from contextlib import contextmanager
+from typing import Generator, Any
 
 # -------------------------------------------------
 # Pfade
@@ -32,88 +32,138 @@ DB_PATH_STORAGE = DATABASE_DIR / "storage.db"
 DB_PATH_BACKUP = DATABASE_DIR / "backup.db"
 
 # -------------------------------------------------
-# Verbindungen
+# Helfer: Verbindung mit WAL + synchronous=NORMAL
 # -------------------------------------------------
 
-# User Connection 
+def _connect_with_wal(db_path: Path) -> sqlite3.Connection:
+    """
+    Öffnet eine SQLite-Verbindung und aktiviert:
+      - WAL-Modus (bessere Concurrency)
+      - synchronous = NORMAL (performanter, aber immer noch sicher genug)
+      - foreign_keys = ON (optional, für späteres Fremdschlüssel-Setup)
+    """
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    
+    # Optimierungen für SQLite im lokalen Netz
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA synchronous=NORMAL")
+    conn.execute("PRAGMA foreign_keys=ON")      # Für spätere Erweiterungen
+    conn.execute("PRAGMA cache_size=-20000")    # 20 MB Cache (beschleunigt Lesevorgänge)
+    
+    return conn
+
+
+# -------------------------------------------------
+# Verbindungen (für direkte Nutzung, z.B. in Migrations-Skripten)
+# -------------------------------------------------
+
 def user_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Benutzer-/Session-Datenbank."""
-    conn = sqlite3.connect(USERS_DB)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _connect_with_wal(USERS_DB)
 
-# Server Connection
 def server_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Server-Datenbank."""
-    conn = sqlite3.connect(SERVER_DB)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _connect_with_wal(SERVER_DB)
 
-# LXC Connection
 def lxc_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur LXC-Datenbank."""
-    conn = sqlite3.connect(LXC_DB)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _connect_with_wal(LXC_DB)
 
-# Logs Connection
 def logs_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Log-Datenbank."""
-    conn = sqlite3.connect(DB_PATH_LOGS)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _connect_with_wal(DB_PATH_LOGS)
 
-# Storage Connection
 def storage_connection() -> sqlite3.Connection:
     """Erzeugt eine Verbindung zur Storage-Datenbank."""
-    conn = sqlite3.connect(DB_PATH_STORAGE)
-    conn.row_factory = sqlite3.Row
-    return conn
+    return _connect_with_wal(DB_PATH_STORAGE)
+
+def backup_connection() -> sqlite3.Connection:
+    """Erzeugt eine Verbindung zur Backup-Datenbank."""
+    return _connect_with_wal(DB_PATH_BACKUP)
+
 
 # -------------------------------------------------
-# Datenbanken  initialisieren
+# Dependency Injection für FastAPI (automatisches Schließen)
 # -------------------------------------------------
+
+@contextmanager
+def get_db_connection(db_path: Path) -> Generator[sqlite3.Connection, None, None]:
+    """Context-Manager für beliebige DB-Pfade."""
+    conn = _connect_with_wal(db_path)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+# Spezifische Dependencies für FastAPI-Routen
+def get_server_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(SERVER_DB) as conn:
+        yield conn
+
+def get_user_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(USERS_DB) as conn:
+        yield conn
+
+def get_lxc_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(LXC_DB) as conn:
+        yield conn
+
+def get_logs_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(DB_PATH_LOGS) as conn:
+        yield conn
+
+def get_storage_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(DB_PATH_STORAGE) as conn:
+        yield conn
+
+def get_backup_db() -> Generator[sqlite3.Connection, None, None]:
+    with get_db_connection(DB_PATH_BACKUP) as conn:
+        yield conn
+
+
+# -------------------------------------------------
+# Datenbanken initialisieren
+# -------------------------------------------------
+
 def init_database() -> None:
+    """Erstellt alle Datenbanken und Tabellen."""
     create_users_database()
     create_server_database()
     create_lxc_database()
     create_logs_database()
     create_storage_database()
-    create_backup_database() 
+    create_backup_database()
+
 
 # -------------------------------------------------
 # users.db
 # -------------------------------------------------
-def create_users_database():
 
+def create_users_database() -> None:
     conn = user_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
-
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-
             username TEXT UNIQUE NOT NULL,
-
             password TEXT NOT NULL,
-
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-
         )
     """)
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
-
             token TEXT PRIMARY KEY,
-
             username TEXT NOT NULL,
-
             expires INTEGER NOT NULL
-
         )
     """)
+
+    # Index für schnellere Session-Lookups
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_username ON sessions(username)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions(expires)")
 
     conn.commit()
     conn.close()
@@ -122,16 +172,15 @@ def create_users_database():
 # -------------------------------------------------
 # server.db
 # -------------------------------------------------
+
 def create_server_database() -> None:
-    """Erstellt die Server-Tabelle für SSH-Verbindungen."""
     conn = server_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS servers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL,
+            name TEXT NOT NULL UNIQUE,
             host TEXT NOT NULL,
             port INTEGER DEFAULT 22,
             username TEXT NOT NULL,
@@ -140,21 +189,24 @@ def create_server_database() -> None:
             description TEXT,
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
+    """)
+
+    # Index für Namenssuche
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_servers_name ON servers(name)")
 
     conn.commit()
     conn.close()
 
+
 # -------------------------------------------------
 # lxc.db
 # -------------------------------------------------
-def create_lxc_database() -> None:
-    """Erstellt die LXC-Tabelle mit Spalten, die von den APIs abgefragt werden."""
-    conn = lxc_connection()
 
-    conn.execute(
-        """
+def create_lxc_database() -> None:
+    conn = lxc_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS lxc (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -167,11 +219,9 @@ def create_lxc_database() -> None:
             ram TEXT,
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
+    """)
 
-    conn.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS lxc_templates (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
@@ -181,43 +231,30 @@ def create_lxc_database() -> None:
             download_url TEXT,
             last_synced TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
-        """
-    )
+    """)
 
-    cursor = conn.cursor()
+    # Indizes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lxc_server ON lxc(server)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_lxc_status ON lxc(status)")
+
+    # Sicherstellen, dass die 'template'-Spalte existiert (für bestehende DBs)
     columns = [row[1] for row in cursor.execute("PRAGMA table_info(lxc)")]
-
     if "template" not in columns:
-        cursor.execute(
-            "ALTER TABLE lxc ADD COLUMN template TEXT DEFAULT 'download'"
-        )
+        cursor.execute("ALTER TABLE lxc ADD COLUMN template TEXT DEFAULT 'download'")
 
     conn.commit()
     conn.close()
-    
-    
-# Abfrage für get-server
-def get_server(server_id: int) -> sqlite3.Row | None:
-    """Lädt einen Serverdatensatz anhand seiner ID."""
-    conn = server_connection()
-    cursor = conn.cursor()
-
-    cursor.execute("SELECT * FROM servers WHERE id=?", (server_id,))
-    server = cursor.fetchone()
-
-    conn.close()
-    return server
 
 
 # -------------------------------------------------
 # logs.db
 # -------------------------------------------------
-def create_logs_database() -> None:
-    """Erstellt die Log-Tabelle."""
-    conn = logs_connection()
 
-    conn.execute(
-        """
+def create_logs_database() -> None:
+    conn = logs_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             timestamp TEXT NOT NULL,
@@ -227,13 +264,17 @@ def create_logs_database() -> None:
             action TEXT,
             details TEXT
         )
-        """
-    )
+    """)
+
+    # Indizes für schnelle Filterung
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_logs_server ON logs(server)")
 
     conn.commit()
     conn.close()
 
-# Write Logs
+
 def write_log(
     server: str | None,
     username: str | None,
@@ -241,44 +282,37 @@ def write_log(
     action: str,
     details: str,
 ) -> None:
-    """Schreibt einen Logeintrag in die passende SQLite-Tabelle."""
+    """Schreibt einen Logeintrag in die Log-Datenbank."""
     conn = logs_connection()
-
-    conn.execute(
-        """
-        INSERT INTO logs (
-            timestamp,
-            server,
-            username,
-            level,
-            action,
-            details
+    try:
+        conn.execute(
+            """
+            INSERT INTO logs (timestamp, server, username, level, action, details)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                server,
+                username,
+                level,
+                action,
+                details,
+            ),
         )
-        VALUES (?,?,?,?,?,?)
-        """,
-        (
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            server,
-            username,
-            level,
-            action,
-            details,
-        ),
-    )
-
-    conn.commit()
-    conn.close()
+        conn.commit()
+    finally:
+        conn.close()
 
 
 # -------------------------------------------------
 # storage.db
 # -------------------------------------------------
-def create_storage_database() -> None:
-    """Erstellt die Tabellen für Storage, Snapshots und SMART-History."""
-    conn = storage_connection()
 
-    conn.execute(
-        """
+def create_storage_database() -> None:
+    conn = storage_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS storage (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -288,11 +322,9 @@ def create_storage_database() -> None:
             raid TEXT,
             mountpoint TEXT
         )
-        """
-    )
+    """)
 
-    conn.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS snapshots (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pool TEXT,
@@ -302,11 +334,9 @@ def create_storage_database() -> None:
             used TEXT,
             referenced TEXT
         )
-        """
-    )
+    """)
 
-    conn.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS smart_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             disk TEXT,
@@ -314,11 +344,9 @@ def create_storage_database() -> None:
             health TEXT,
             created TEXT
         )
-        """
-    )
+    """)
 
-    conn.execute(
-        """
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS scrub_history (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             pool TEXT,
@@ -328,25 +356,25 @@ def create_storage_database() -> None:
             errors INTEGER,
             result TEXT
         )
-        """
-    )
+    """)
+
+    # Indizes
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_storage_server ON storage(server)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_pool ON snapshots(pool)")
 
     conn.commit()
     conn.close()
 
+
 # -------------------------------------------------
-# backup.db – Backup-Verwaltung
+# backup.db
 # -------------------------------------------------
-def backup_connection() -> sqlite3.Connection:
-    """Erzeugt eine Verbindung zur Backup-Datenbank."""
-    conn = sqlite3.connect(DB_PATH_BACKUP)
-    conn.row_factory = sqlite3.Row
-    return conn
 
 def create_backup_database() -> None:
-    """Erstellt die Backup-Tabelle."""
     conn = backup_connection()
-    conn.execute("""
+    cursor = conn.cursor()
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS backups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
@@ -357,5 +385,46 @@ def create_backup_database() -> None:
             created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+
+    # Index für schnelle Server-Filterung
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_backups_server ON backups(server_id)")
+
     conn.commit()
     conn.close()
+
+
+# -------------------------------------------------
+# Hilfsfunktionen für häufig verwendete DB-Operationen
+# -------------------------------------------------
+
+def get_server(server_id: int) -> sqlite3.Row | None:
+    """Lädt einen Serverdatensatz anhand seiner ID."""
+    conn = server_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM servers WHERE id=?", (server_id,))
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+def get_server_by_name(name: str) -> sqlite3.Row | None:
+    """Lädt einen Serverdatensatz anhand seines Namens."""
+    conn = server_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM servers WHERE name=?", (name,))
+        return cursor.fetchone()
+    finally:
+        conn.close()
+
+
+def get_all_servers() -> list[sqlite3.Row]:
+    """Lädt alle Server."""
+    conn = server_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM servers ORDER BY name")
+        return cursor.fetchall()
+    finally:
+        conn.close()
