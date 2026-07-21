@@ -1,4 +1,4 @@
-name: Build and Push SIPBridge
+name: Build and Push GateCore Panel
 
 on:
   workflow_dispatch:
