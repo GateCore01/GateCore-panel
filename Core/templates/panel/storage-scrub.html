@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="storage.scrub_title">BTRFS Scrub</title>
+    <link rel="stylesheet" href="/css/panel.css">
+    <script src="/js/i18n.js" defer></script>
+    <script src="/js/auth.js" defer></script>
+    <script src="/js/storage-scrub.js" defer></script>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="sidebar">
+        <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+        <h2>GateCore-Panel</h2>
+        <ul>
+            <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
+            <li><a href="/panel/docker" data-i18n="sidebar.docker">Docker</a></li>
+            <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
+            <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
+            <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
+            <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
+            <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
+            <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
+        </ul>
+    </div>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left">
+            <h1 data-i18n="storage.scrub_title">BTRFS Scrub Verwaltung</h1>
+        </div>
+        <div class="taskbar-oben-right">
+            <button onclick="window.location='/panel/storage'" data-i18n="button.back">Zurück</button>
+            <button onclick="loadScrubData()" data-i18n="button.refresh">Aktualisieren</button>
+            <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        </div>
+    </div>
+    <div class="statistiken">
+        <div class="form-card">
+            <h2 data-i18n="storage.start_scrub">Scrub starten</h2>
+            <form id="scrubForm">
+                <div class="form-group">
+                    <label data-i18n="storage.pool_name">Pool</label>
+                    <select id="pool" required></select>
+                </div>
+                <div class="button-row">
+                    <button type="submit" data-i18n="storage.start_scrub">Scrub starten</button>
+                    <button type="button" id="stopScrub" data-i18n="storage.stop_scrub">Scrub stoppen</button>
+                </div>
+            </form>
+            <div id="status"></div>
+        </div>
+        <br><br>
+        <div class="table-card">
+            <h2 data-i18n="storage.current_scrub">Aktueller Scrub</h2>
+            <table>
+                <tbody>
+                    <tr><th data-i18n="storage.status">Status</th><td id="scrubState">-</td></tr>
+                    <tr><th data-i18n="storage.progress">Fortschritt</th><td id="scrubProgress">-</td></tr>
+                    <tr><th data-i18n="storage.errors">Fehler</th><td id="scrubErrors">-</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

@@ -104,21 +104,21 @@ case "$OS" in
     debian|ubuntu)
         echo "Installing Python dependencies for Debian/Ubuntu..."
         pip install --upgrade pip
-        pip install fastapi uvicorn jinja2 python-multipart paramiko bcrypt passlib python-dotenv aiofiles psutil requests pydantic sqlalchemy
+        pip install fastapi uvicorn jinja2 python-multipart paramiko bcrypt passlib python-dotenv aiofiles psutil requests pydantic sqlalchemy websockets
         ;;
     
     # Red Hat-based systems
     centos|rhel|rocky|fedora)
         echo "Installing Python dependencies for Red Hat-based systems..."
         pip install --upgrade pip
-        pip install fastapi uvicorn jinja2 paramiko python-multipart passlib bcrypt aiofiles python-dotenv psutil requests pydantic sqlalchemy
+        pip install fastapi uvicorn jinja2 paramiko python-multipart passlib bcrypt aiofiles python-dotenv psutil requests pydantic sqlalchemy websockets
         ;;
 
     # OpenSUSE-based systems
     opensuse*|suse)
         echo "Installing Python dependencies for OpenSUSE-based systems..."
         pip install --upgrade pip
-        pip install fastapi uvicorn jinja2 paramiko python-multipart passlib bcrypt aiofiles python-dotenv psutil requests pydantic sqlalchemy
+        pip install fastapi uvicorn jinja2 paramiko python-multipart passlib bcrypt aiofiles python-dotenv psutil requests pydantic sqlalchemy websockets
         ;;
 esac
 

@@ -11,54 +11,48 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-
-<div class="sidebar">
-    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
-    <h2>GateCore-Panel</h2>
-    <ul>
-        <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
-        <li><a href="/panel/lxc" data-i18n="sidebar.lxc">LXC</a></li>
-        <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
-        <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
-        <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
-        <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
-        <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
-        <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
-    </ul>
-</div>
-
-<div class="taskbar-oben">
-    <div class="taskbar-oben-left">
-        <h1 data-i18n="backup.title">Backup Management</h1>
+    <div class="sidebar">
+        <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+        <h2>GateCore-Panel</h2>
+        <ul>
+            <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
+            <li><a href="/panel/docker" data-i18n="sidebar.docker">Docker</a></li>
+            <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
+            <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
+            <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
+            <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
+            <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
+            <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
+        </ul>
     </div>
-    <div class="taskbar-oben-right">
-        <button id="createBackupButton" data-i18n="backup.create">Create Backup</button>
-        <button id="refreshBackupButton" data-i18n="button.refresh">Refresh</button>
-        <button id="logoutButton" data-i18n="button.logout">Logout</button>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left">
+            <h1 data-i18n="backup.title">Backup Management</h1>
+        </div>
+        <div class="taskbar-oben-right">
+            <button id="createBackupButton" data-i18n="backup.create">Create Backup</button>
+            <button id="refreshBackupButton" data-i18n="button.refresh">Refresh</button>
+            <button id="logoutButton" data-i18n="button.logout">Logout</button>
+        </div>
     </div>
-</div>
-
-<div class="statistiken">
-    <div class="table-card">
-        <h2 data-i18n="backup.list">Backup List</h2>
-        <table id="backupTable">
-            <thead>
-                <tr>
-                    <th data-i18n="backup.name">Name</th>
-                    <th data-i18n="backup.date">Date</th>
-                    <th data-i18n="backup.size">Size</th>
-                    <th data-i18n="backup.status">Status</th>
-                    <th data-i18n="backup.actions">Actions</th>
-                </tr>
-            </thead>
-            <tbody id="backupBody">
-                <tr>
-                    <td colspan="5" class="empty-row" data-i18n="backup.no_backups">No backups available.</td>
-                </tr>
-            </tbody>
-        </table>
+    <div class="statistiken">
+        <div class="table-card">
+            <h2 data-i18n="backup.list">Backup List</h2>
+            <table id="backupTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="backup.name">Name</th>
+                        <th data-i18n="backup.date">Date</th>
+                        <th data-i18n="backup.size">Size</th>
+                        <th data-i18n="backup.status">Status</th>
+                        <th data-i18n="backup.actions">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="backupBody">
+                    <tr><td colspan="5" class="empty-row" data-i18n="backup.no_backups">No backups available.</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
-
 </body>
 </html>

@@ -1,796 +1,543 @@
 ###########################################################################
-# File: Core/routes.py
-# Alle Routen (Seiten & API) für GateCore
-# - Jetzt synchron (def) → keine Thread-Probleme mit SQLite
-# - Nutzt Dependency Injection für DB-Verbindungen
-# - Einheitliche Fehlerbehandlung mit HTTPExceptions
+# File: Core/routes.py – Alle Routen (Seiten & API)
 ###########################################################################
-# License: MIT License
-# Created by: Korbinian Musch
-# Date: 2026-07-20
-# Communion: GateCore01
-############################################################################
-
 import sqlite3
 import json
 from datetime import datetime
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse
 
 from auth import require_login, hash_password
 from database import (
-    get_server,
-    get_server_db,
-    get_user_db,
-    get_lxc_db,
-    get_storage_db,
-    get_backup_db,
-    get_logs_db,
-    write_log,
+    get_server, get_server_db, get_docker_db, get_storage_db,
+    get_logs_db, get_user_db, get_backup_db, write_log
 )
 from models import (
-    AddLXC,
-    AddServer,
-    AddUser,
-    ChangePassword,
-    CreateStorage,
-    UpdateStorage,
-    StorageAction,
-    SnapshotCreate,
-    SnapshotRename,
-    SnapshotClone,
+    AddDockerContainer, CreateBtrfsPool, CreateBtrfsSubvolume,
+    CreateBtrfsSnapshot, AddServer, AddUser, ChangePassword
 )
 from ssh.client import SSHClient
-from ssh.lxc import create as create_lxc_container
+from ssh.docker import (
+    list_containers, start_container, stop_container,
+    restart_container, delete_container, create_container,
+    container_logs
+)
+from ssh.btrfs import (
+    create_pool, delete_pool, create_subvolume, delete_subvolume,
+    list_subvolumes, create_snapshot, delete_snapshot, list_snapshots,
+    scrub_start, scrub_status
+)
 
 BASE_DIR = Path(__file__).resolve().parent
 router = APIRouter()
 
-
-# =====================================================
-# SEITEN-ROUTEN (HTML)
-# =====================================================
-
+# ===== SEITEN =====
 @router.get("/")
-def login_page():
-    return FileResponse(BASE_DIR / "templates" / "index.html")
-
+def login_page(): return FileResponse(BASE_DIR / "templates" / "index.html")
 @router.get("/login")
-def login_page_alias():
-    return FileResponse(BASE_DIR / "templates" / "index.html")
+def login_alias(): return FileResponse(BASE_DIR / "templates" / "index.html")
 
 @router.get("/panel")
-def panel(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "index.html")
-
-@router.get("/panel/")
-def panel_slash(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "index.html")
-
+def panel(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "index.html")
 @router.get("/panel/backup")
-def backup_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "backup.html")
-
+def backup_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "backup.html")
 @router.get("/panel/users")
-def user_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "users.html")
-
+def users_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "users.html")
 @router.get("/panel/servers")
-def server_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "servers.html")
-
+def servers_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "servers.html")
 @router.get("/panel/server_add")
-def server_add_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "server_add.html")
-
+def server_add_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "server_add.html")
 @router.get("/panel/settings")
-def settings_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "settings.html")
-
+def settings_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "settings.html")
 @router.get("/panel/logs")
-def logs_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "logs.html")
-
-@router.get("/panel/lxc")
-def lxc_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "lxc.html")
-
-@router.get("/panel/lxc_add")
-def lxc_add_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "lxc_add.html")
-
-@router.get("/panel/lxc/console/{id}")
-def lxc_console_page(id: int, user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "lxc_console.html")
-
+def logs_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "logs.html")
+@router.get("/panel/docker")
+def docker_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "docker.html")
+@router.get("/panel/docker_add")
+def docker_add_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "docker_add.html")
 @router.get("/panel/storage")
-def storage_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage.html")
-
+def storage_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage.html")
 @router.get("/panel/storage/add")
-def storage_add_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-add.html")
-
-@router.get("/panel/storage/edit")
-def storage_edit_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-edit.html")
-
+def storage_add_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-add.html")
 @router.get("/panel/storage/details")
-def storage_details_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-details.html")
-
+def storage_details_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-details.html")
+@router.get("/panel/storage/edit")
+def storage_edit_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-edit.html")
 @router.get("/panel/storage/smart")
-def storage_smart_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-smart.html")
-
+def storage_smart_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-smart.html")
 @router.get("/panel/storage/snapshots")
-def storage_snapshots_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-snapshots.html")
-
+def storage_snapshots_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-snapshots.html")
 @router.get("/panel/storage/scrub")
-def storage_scrub_page(user=Depends(require_login)):
-    return FileResponse(BASE_DIR / "templates" / "panel" / "storage" / "storage-scrub.html")
+def storage_scrub_page(user=Depends(require_login)): return FileResponse(BASE_DIR / "templates" / "panel" / "storage-scrub.html")
 
+# ===== API – DOCKER =====
+@router.get("/api/docker/containers")
+def docker_list(user=Depends(require_login), conn=Depends(get_docker_db)):
+    containers = conn.execute("SELECT * FROM docker_containers ORDER BY name").fetchall()
+    result = []
+    for c in containers:
+        server = get_server(c["server_id"])
+        status = "unknown"
+        if server:
+            try:
+                with SSHClient(dict(server)) as ssh:
+                    out = ssh.execute(f"docker inspect {c['name']} --format '{{{{.State.Status}}}}'")
+                    status = out["stdout"].strip() or "unknown"
+            except:
+                pass
+        result.append({**dict(c), "status": status})
+    return result
 
-# =====================================================
-# API-ROUTEN – LXC
-# =====================================================
-
-@router.get("/api/lxc/count")
-def lxc_count(
-    user=Depends(require_login),
-    conn=Depends(get_lxc_db)
-):
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM lxc")
-    count = cursor.fetchone()[0]
-    return {"count": count}
-
-
-@router.get("/api/lxc/list")
-def lxc_list(
-    user=Depends(require_login),
-    conn=Depends(get_lxc_db)
-):
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, name, server, template, status, ip, cpu, ram FROM lxc ORDER BY name"
-    )
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
-
-
-@router.post("/api/lxc/start/{id}")
-def start_lxc(id: int, user=Depends(require_login)):
-    # Platzhalter – später SSH-Befehl
-    return {"message": "Container gestartet."}
-
-
-@router.post("/api/lxc/stop/{id}")
-def stop_lxc(id: int, user=Depends(require_login)):
-    return {"message": "Container gestoppt."}
-
-
-@router.post("/api/lxc/restart/{id}")
-def restart_lxc(id: int, user=Depends(require_login)):
-    return {"message": "Container neugestartet."}
-
-
-@router.delete("/api/lxc/delete/{id}")
-def delete_lxc(
-    id: int,
-    user=Depends(require_login),
-    conn=Depends(get_lxc_db)
-):
-    conn.execute("DELETE FROM lxc WHERE id=?", (id,))
-    conn.commit()
-    return {"message": "Container gelöscht."}
-
-
-@router.post("/api/lxc/add")
-def add_lxc(
-    data: AddLXC,
-    user=Depends(require_login),
-    conn=Depends(get_lxc_db)
-):
-    server_row = get_server(int(data.server))
-    if server_row is None:
-        raise HTTPException(status_code=404, detail="Server nicht gefunden.")
-
-    remote_server = {
-        "host": server_row["host"],
-        "port": server_row["port"],
-        "username": server_row["username"],
-        "password": server_row["password"],
-        "private_key": server_row["private_key"],
-    }
-
+@router.post("/api/docker/container/create")
+def docker_create(data: AddDockerContainer, user=Depends(require_login), conn=Depends(get_docker_db)):
+    server = get_server(data.server_id)
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
     try:
-        create_result = create_lxc_container(
-            remote_server,
-            data.name,
-            data.template,
-            backing_store="dir",
+        container_id = create_container(
+            dict(server), data.name, data.image, data.command,
+            data.env, data.volumes, data.ports, data.detach
         )
-        if create_result.get("stderr"):
-            raise RuntimeError(create_result["stderr"])
-    except Exception as exc:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Container konnte nicht erstellt werden: {exc}"
+        conn.execute(
+            "INSERT INTO docker_containers (name, server_id, image, command) VALUES (?,?,?,?)",
+            (data.name, data.server_id, data.image, data.command)
         )
+        conn.commit()
+        write_log(server["name"], user.username, "INFO", "docker_create", f"Container {data.name} erstellt")
+        return {"message": f"Container {data.name} erstellt", "container_id": container_id}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
-    conn.execute(
-        "INSERT INTO lxc (name, vmid, server, template, status) VALUES (?,?,?,?,?)",
-        (data.name, data.vmid, data.server, data.template, "creating")
-    )
+@router.post("/api/docker/container/start/{container_id}")
+def docker_start(container_id: int, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    server = get_server(container["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        start_container(dict(server), container["name"])
+        write_log(server["name"], user.username, "INFO", "docker_start", f"Container {container['name']} gestartet")
+        return {"message": f"Container {container['name']} gestartet"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.post("/api/docker/container/stop/{container_id}")
+def docker_stop(container_id: int, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    server = get_server(container["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        stop_container(dict(server), container["name"])
+        write_log(server["name"], user.username, "INFO", "docker_stop", f"Container {container['name']} gestoppt")
+        return {"message": f"Container {container['name']} gestoppt"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.post("/api/docker/container/restart/{container_id}")
+def docker_restart(container_id: int, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    server = get_server(container["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        restart_container(dict(server), container["name"])
+        write_log(server["name"], user.username, "INFO", "docker_restart", f"Container {container['name']} neugestartet")
+        return {"message": f"Container {container['name']} neugestartet"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.delete("/api/docker/container/delete/{container_id}")
+def docker_delete(container_id: int, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    server = get_server(container["server_id"])
+    try:
+        if server:
+            delete_container(dict(server), container["name"], force=True)
+        conn.execute("DELETE FROM docker_containers WHERE id=?", (container_id,))
+        conn.commit()
+        write_log(server["name"] if server else "Unbekannt", user.username, "INFO", "docker_delete", f"Container {container['name']} gelöscht")
+        return {"message": f"Container {container['name']} gelöscht"}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.get("/api/docker/container/logs/{container_id}")
+def docker_logs(container_id: int, tail: int = 100, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    server = get_server(container["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        logs = container_logs(dict(server), container["name"], tail)
+        return {"logs": logs}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+# ===== API – BTRFS STORAGE =====
+@router.get("/api/storage/pools")
+def btrfs_pools(user=Depends(require_login), conn=Depends(get_storage_db)):
+    pools = conn.execute("SELECT * FROM storage_pools ORDER BY name").fetchall()
+    return [dict(p) for p in pools]
+
+@router.post("/api/storage/pool/create")
+def btrfs_create_pool(data: CreateBtrfsPool, user=Depends(require_login), conn=Depends(get_storage_db)):
+    server = get_server(data.server_id)
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        result = create_pool(dict(server), data.devices, data.raid_level, data.mountpoint)
+        conn.execute(
+            "INSERT INTO storage_pools (name, server_id, mountpoint, raid_level, devices) VALUES (?,?,?,?,?)",
+            (data.name, data.server_id, data.mountpoint, data.raid_level, json.dumps(data.devices))
+        )
+        conn.commit()
+        write_log(server["name"], user.username, "INFO", "btrfs_create_pool", f"Pool {data.name} erstellt")
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.delete("/api/storage/pool/{pool_id}")
+def btrfs_delete_pool(pool_id: int, user=Depends(require_login), conn=Depends(get_storage_db)):
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (pool_id,)).fetchone()
+    if not pool:
+        raise HTTPException(404, "Pool nicht gefunden")
+    server = get_server(pool["server_id"])
+    if server:
+        try:
+            delete_pool(dict(server), pool["mountpoint"])
+        except:
+            pass
+    conn.execute("DELETE FROM storage_pools WHERE id=?", (pool_id,))
     conn.commit()
-    return {"message": "Container gespeichert."}
+    write_log(server["name"] if server else "Unbekannt", user.username, "INFO", "btrfs_delete_pool", f"Pool {pool['name']} gelöscht")
+    return {"message": "Pool gelöscht"}
 
+@router.get("/api/storage/subvolumes")
+def btrfs_subvolumes(pool_id: int | None = None, user=Depends(require_login), conn=Depends(get_storage_db)):
+    if pool_id:
+        subvols = conn.execute("SELECT * FROM btrfs_subvolumes WHERE pool_id=?", (pool_id,)).fetchall()
+    else:
+        subvols = conn.execute("SELECT * FROM btrfs_subvolumes").fetchall()
+    return [dict(s) for s in subvols]
 
-@router.get("/api/lxc/templates")
-def lxc_templates(
-    user=Depends(require_login),
-    conn=Depends(get_lxc_db)
-):
-    cursor = conn.cursor()
-    cursor.execute(
-        "SELECT id, name, path, type, repo_url, download_url FROM lxc_templates ORDER BY name"
-    )
-    rows = cursor.fetchall()
-    return [dict(row) for row in rows]
+@router.post("/api/storage/subvolume/create")
+def btrfs_create_subvolume(data: CreateBtrfsSubvolume, user=Depends(require_login), conn=Depends(get_storage_db)):
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (data.pool_id,)).fetchone()
+    if not pool:
+        raise HTTPException(404, "Pool nicht gefunden")
+    server = get_server(pool["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        result = create_subvolume(dict(server), pool["mountpoint"], data.name)
+        conn.execute(
+            "INSERT INTO btrfs_subvolumes (pool_id, name, path) VALUES (?,?,?)",
+            (data.pool_id, data.name, f"{pool['mountpoint']}/{data.name}")
+        )
+        conn.commit()
+        write_log(server["name"], user.username, "INFO", "btrfs_create_subvol", f"Subvolume {data.name} erstellt")
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
+@router.delete("/api/storage/subvolume/{subvol_id}")
+def btrfs_delete_subvolume(subvol_id: int, user=Depends(require_login), conn=Depends(get_storage_db)):
+    subvol = conn.execute("SELECT * FROM btrfs_subvolumes WHERE id=?", (subvol_id,)).fetchone()
+    if not subvol:
+        raise HTTPException(404, "Subvolume nicht gefunden")
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (subvol["pool_id"],)).fetchone()
+    if pool:
+        server = get_server(pool["server_id"])
+        if server:
+            try:
+                delete_subvolume(dict(server), subvol["path"])
+            except:
+                pass
+    conn.execute("DELETE FROM btrfs_subvolumes WHERE id=?", (subvol_id,))
+    conn.commit()
+    return {"message": "Subvolume gelöscht"}
 
-# =====================================================
-# API-ROUTEN – SERVER
-# =====================================================
+@router.get("/api/storage/snapshots")
+def btrfs_snapshots(pool_id: int | None = None, user=Depends(require_login), conn=Depends(get_storage_db)):
+    if pool_id:
+        snaps = conn.execute(
+            "SELECT * FROM btrfs_snapshots WHERE subvolume_id IN (SELECT id FROM btrfs_subvolumes WHERE pool_id=?)",
+            (pool_id,)
+        ).fetchall()
+    else:
+        snaps = conn.execute("SELECT * FROM btrfs_snapshots").fetchall()
+    return [dict(s) for s in snaps]
 
+@router.post("/api/storage/snapshot/create")
+def btrfs_create_snapshot(data: CreateBtrfsSnapshot, user=Depends(require_login), conn=Depends(get_storage_db)):
+    subvol = conn.execute("SELECT * FROM btrfs_subvolumes WHERE id=?", (data.subvolume_id,)).fetchone()
+    if not subvol:
+        raise HTTPException(404, "Subvolume nicht gefunden")
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (subvol["pool_id"],)).fetchone()
+    if not pool:
+        raise HTTPException(404, "Pool nicht gefunden")
+    server = get_server(pool["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    snapshot_path = f"{pool['mountpoint']}/{data.snapshot_name}"
+    try:
+        result = create_snapshot(dict(server), subvol["path"], snapshot_path)
+        conn.execute(
+            "INSERT INTO btrfs_snapshots (subvolume_id, snapshot_name, path) VALUES (?,?,?)",
+            (data.subvolume_id, data.snapshot_name, snapshot_path)
+        )
+        conn.commit()
+        write_log(server["name"], user.username, "INFO", "btrfs_create_snapshot", f"Snapshot {data.snapshot_name} erstellt")
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.delete("/api/storage/snapshot/{snapshot_id}")
+def btrfs_delete_snapshot(snapshot_id: int, user=Depends(require_login), conn=Depends(get_storage_db)):
+    snap = conn.execute("SELECT * FROM btrfs_snapshots WHERE id=?", (snapshot_id,)).fetchone()
+    if not snap:
+        raise HTTPException(404, "Snapshot nicht gefunden")
+    subvol = conn.execute("SELECT * FROM btrfs_subvolumes WHERE id=?", (snap["subvolume_id"],)).fetchone()
+    if subvol:
+        pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (subvol["pool_id"],)).fetchone()
+        if pool:
+            server = get_server(pool["server_id"])
+            if server:
+                try:
+                    delete_snapshot(dict(server), snap["path"])
+                except:
+                    pass
+    conn.execute("DELETE FROM btrfs_snapshots WHERE id=?", (snapshot_id,))
+    conn.commit()
+    return {"message": "Snapshot gelöscht"}
+
+@router.post("/api/storage/pool/{pool_id}/scrub/start")
+def btrfs_scrub_start(pool_id: int, user=Depends(require_login), conn=Depends(get_storage_db)):
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (pool_id,)).fetchone()
+    if not pool:
+        raise HTTPException(404, "Pool nicht gefunden")
+    server = get_server(pool["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        result = scrub_start(dict(server), pool["mountpoint"])
+        return {"message": result}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+@router.get("/api/storage/pool/{pool_id}/scrub/status")
+def btrfs_scrub_status(pool_id: int, user=Depends(require_login), conn=Depends(get_storage_db)):
+    pool = conn.execute("SELECT * FROM storage_pools WHERE id=?", (pool_id,)).fetchone()
+    if not pool:
+        raise HTTPException(404, "Pool nicht gefunden")
+    server = get_server(pool["server_id"])
+    if not server:
+        raise HTTPException(404, "Server nicht gefunden")
+    try:
+        status = scrub_status(dict(server), pool["mountpoint"])
+        return {"status": status}
+    except Exception as e:
+        raise HTTPException(500, str(e))
+
+# ===== API – SERVER (unverändert) =====
 @router.post("/api/server/add")
-def add_server(
-    data: AddServer,
-    user=Depends(require_login),
-    conn=Depends(get_server_db)
-):
+def add_server(data: AddServer, user=Depends(require_login), conn=Depends(get_server_db)):
     try:
         conn.execute(
-            """
-            INSERT INTO servers (name, host, port, username, password, private_key)
-            VALUES (?,?,?,?,?,?)
-            """,
-            (data.hostname, data.ip, data.port, data.username, data.password, data.private_key),
+            "INSERT INTO servers (name, host, port, username, password, private_key) VALUES (?,?,?,?,?,?)",
+            (data.hostname, data.ip, data.port, data.username, data.password, data.private_key)
         )
         conn.commit()
         return {"message": "Server gespeichert."}
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Servername existiert bereits.")
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Server konnte nicht gespeichert werden: {exc}")
-
+        raise HTTPException(409, "Servername existiert bereits.")
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 @router.post("/api/server/test")
 def test_server_connection(data: AddServer, user=Depends(require_login)):
     try:
         with SSHClient({
-            "host": data.ip,
-            "port": data.port,
-            "username": data.username,
-            "password": data.password,
-            "private_key": data.private_key,
+            "host": data.ip, "port": data.port, "username": data.username,
+            "password": data.password, "private_key": data.private_key
         }) as ssh:
             result = ssh.execute("hostname")
         if result["stderr"]:
-            raise HTTPException(status_code=400, detail=result["stderr"])
+            raise HTTPException(400, result["stderr"])
         return {"message": f"Verbindung erfolgreich. Hostname: {result['stdout']}"}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Verbindung fehlgeschlagen: {exc}")
-
+    except Exception as e:
+        raise HTTPException(500, f"Verbindung fehlgeschlagen: {e}")
 
 @router.post("/api/server/test/{server_id}")
-def test_server_connection_by_id(
-    server_id: int,
-    user=Depends(require_login),
-    conn=Depends(get_server_db)
-):
-    row = conn.execute(
-        "SELECT id, name, host, port, username, password, private_key FROM servers WHERE id=?",
-        (server_id,),
-    ).fetchone()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Server nicht gefunden")
-
+def test_server_connection_by_id(server_id: int, user=Depends(require_login), conn=Depends(get_server_db)):
+    row = conn.execute("SELECT * FROM servers WHERE id=?", (server_id,)).fetchone()
+    if not row:
+        raise HTTPException(404, "Server nicht gefunden")
     try:
         with SSHClient(dict(row)) as ssh:
             result = ssh.execute("hostname")
         if result["stderr"]:
-            raise HTTPException(status_code=400, detail=result["stderr"])
+            raise HTTPException(400, result["stderr"])
         return {"message": f"Verbindung erfolgreich. Hostname: {result['stdout']}"}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Verbindung fehlgeschlagen: {exc}")
-
+    except Exception as e:
+        raise HTTPException(500, f"Verbindung fehlgeschlagen: {e}")
 
 @router.delete("/api/server/delete/{server_id}")
-def delete_server(
-    server_id: int,
-    user=Depends(require_login),
-    conn=Depends(get_server_db)
-):
+def delete_server(server_id: int, user=Depends(require_login), conn=Depends(get_server_db)):
     cursor = conn.execute("DELETE FROM servers WHERE id=?", (server_id,))
     conn.commit()
     if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Server nicht gefunden.")
+        raise HTTPException(404, "Server nicht gefunden.")
     return {"message": "Server gelöscht."}
 
-
 @router.get("/api/server/list")
-def list_servers(
-    user=Depends(require_login),
-    conn=Depends(get_server_db)
-):
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name, host, port, username FROM servers ORDER BY name")
-    rows = cursor.fetchall()
+def list_servers(user=Depends(require_login), conn=Depends(get_server_db)):
+    rows = conn.execute("SELECT id, name, host, port, username FROM servers ORDER BY name").fetchall()
     return [dict(row) for row in rows]
-
 
 @router.get("/api/server/select")
-def server_select(
-    user=Depends(require_login),
-    conn=Depends(get_server_db)
-):
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, name FROM servers ORDER BY name")
-    rows = cursor.fetchall()
+def server_select(user=Depends(require_login), conn=Depends(get_server_db)):
+    rows = conn.execute("SELECT id, name FROM servers ORDER BY name").fetchall()
     return [dict(row) for row in rows]
 
-
-# =====================================================
-# API-ROUTEN – BENUTZER
-# =====================================================
-
+# ===== API – BENUTZER (unverändert) =====
 @router.get("/api/users/list")
-def user_list(
-    user=Depends(require_login),
-    conn=Depends(get_user_db)
-):
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users ORDER BY username")
-    rows = cursor.fetchall()
+def user_list(user=Depends(require_login), conn=Depends(get_user_db)):
+    rows = conn.execute("SELECT id, username FROM users ORDER BY username").fetchall()
     return [dict(row) for row in rows]
-
 
 @router.post("/api/users/add")
-def add_user(
-    data: AddUser,
-    user=Depends(require_login),
-    conn=Depends(get_user_db)
-):
+def add_user(data: AddUser, user=Depends(require_login), conn=Depends(get_user_db)):
     try:
-        hashed_password = hash_password(data.password)
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES (?,?)",
-            (data.username, hashed_password),
-        )
+        hashed = hash_password(data.password)
+        conn.execute("INSERT INTO users (username, password) VALUES (?,?)", (data.username, hashed))
         conn.commit()
         return {"message": "Benutzer erstellt."}
     except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Benutzername existiert bereits.")
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
+        raise HTTPException(409, "Benutzername existiert bereits.")
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 @router.delete("/api/users/delete/{user_id}")
-def delete_user(
-    user_id: int,
-    user=Depends(require_login),
-    conn=Depends(get_user_db)
-):
+def delete_user(user_id: int, user=Depends(require_login), conn=Depends(get_user_db)):
     conn.execute("DELETE FROM users WHERE id=?", (user_id,))
     conn.commit()
     return {"message": "Benutzer gelöscht."}
 
-
 @router.put("/api/users/password")
-def change_password(
-    data: ChangePassword,
-    user=Depends(require_login),
-    conn=Depends(get_user_db)
-):
-    try:
-        hashed_password = hash_password(data.password)
-        conn.execute(
-            "UPDATE users SET password=? WHERE id=?",
-            (hashed_password, data.id),
-        )
-        conn.commit()
-        return {"message": "Passwort geändert."}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+def change_password(data: ChangePassword, user=Depends(require_login), conn=Depends(get_user_db)):
+    hashed = hash_password(data.password)
+    conn.execute("UPDATE users SET password=? WHERE id=?", (hashed, data.id))
+    conn.commit()
+    return {"message": "Passwort geändert."}
 
-
-# =====================================================
-# API-ROUTEN – STORAGE
-# =====================================================
-
-@router.post("/api/storage/add")
-def storage_add(
-    data: CreateStorage,
-    user=Depends(require_login),
-    conn=Depends(get_storage_db)
-):
-    try:
-        conn.execute(
-            """
-            INSERT INTO storage (name, server, pool, filesystem, raid, mountpoint)
-            VALUES (?,?,?,?,?,?)
-            """,
-            (data.name, data.server, data.pool, data.filesystem, data.raid, data.mountpoint)
-        )
-        conn.commit()
-        return {"message": "Speicher angelegt."}
-    except sqlite3.IntegrityError:
-        raise HTTPException(status_code=409, detail="Pool existiert bereits.")
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@router.get("/api/storage/list")
-def storage_list(
-    user=Depends(require_login),
-    conn=Depends(get_storage_db)
-):
-    rows = conn.execute("SELECT * FROM storage ORDER BY id").fetchall()
+# ===== API – LOGS (unverändert) =====
+@router.get("/api/logs/list")
+def logs_list(level: str = "all", server: str = "all", user=Depends(require_login), conn=Depends(get_logs_db)):
+    query = "SELECT * FROM logs WHERE 1=1"
+    params = []
+    if level != "all":
+        query += " AND level = ?"
+        params.append(level)
+    if server != "all":
+        query += " AND server = ?"
+        params.append(server)
+    query += " ORDER BY timestamp DESC LIMIT 1000"
+    rows = conn.execute(query, params).fetchall()
     return [dict(row) for row in rows]
 
-
-@router.get("/api/storage/details/{pool}")
-def storage_details(
-    pool: str,
-    user=Depends(require_login),
-    conn=Depends(get_storage_db)
-):
-    row = conn.execute("SELECT * FROM storage WHERE pool=?", (pool,)).fetchone()
-    if row is None:
-        raise HTTPException(status_code=404, detail="Pool nicht gefunden.")
-    return dict(row)
-
-
-@router.put("/api/storage/update")
-def storage_update(
-    data: UpdateStorage,
-    user=Depends(require_login),
-    conn=Depends(get_storage_db)
-):
-    conn.execute(
-        """
-        UPDATE storage
-        SET name=?, filesystem=?, raid=?, mountpoint=?
-        WHERE pool=?
-        """,
-        (data.new_name, data.filesystem, data.raid, data.mountpoint, data.name)
-    )
+@router.delete("/api/logs/clear")
+def logs_clear(user=Depends(require_login), conn=Depends(get_logs_db)):
+    conn.execute("DELETE FROM logs")
     conn.commit()
-    return {"message": "Gespeichert."}
+    write_log(None, user.username, "INFO", "logs_clear", "Alle Logs gelöscht")
+    return {"message": "Alle Logs gelöscht."}
 
-
-@router.delete("/api/storage/delete/{pool}")
-def storage_delete(
-    pool: str,
-    user=Depends(require_login),
-    conn=Depends(get_storage_db)
-):
-    conn.execute("DELETE FROM storage WHERE pool=?", (pool,))
-    conn.commit()
-    return {"message": "Pool gelöscht."}
-
-
-# Storage SMART (Platzhalter)
-@router.get("/api/storage/smart/{disk}")
-def storage_smart(disk: str, user=Depends(require_login)):
-    return {}
-
-@router.get("/api/storage/smart/attributes/{disk}")
-def storage_smart_attributes(disk: str, user=Depends(require_login)):
-    return []
-
-@router.get("/api/storage/smart/log/{disk}")
-def storage_smart_log(disk: str, user=Depends(require_login)):
-    return {"log": ""}
-
-@router.post("/api/storage/smart/test")
-def storage_smart_test(data: StorageAction, user=Depends(require_login)):
-    return {"message": "SMART-Test gestartet."}
-
-# Storage Scrub (Platzhalter)
-@router.get("/api/storage/scrub/{pool}")
-def storage_scrub(pool: str, user=Depends(require_login)):
-    return {}
-
-@router.post("/api/storage/scrub/start")
-def storage_scrub_start(data: StorageAction, user=Depends(require_login)):
-    return {"message": "Scrub gestartet."}
-
-@router.post("/api/storage/scrub/stop")
-def storage_scrub_stop(data: StorageAction, user=Depends(require_login)):
-    return {"message": "Scrub gestoppt."}
-
-# Storage Snapshots (Platzhalter)
-@router.get("/api/storage/snapshots/{pool}")
-def snapshot_list(pool: str, user=Depends(require_login)):
-    return []
-
-@router.post("/api/storage/snapshot/create")
-def snapshot_create(data: SnapshotCreate, user=Depends(require_login)):
-    return {"message": "Snapshot erstellt."}
-
-@router.put("/api/storage/snapshot/rename")
-def snapshot_rename(data: SnapshotRename, user=Depends(require_login)):
-    return {"message": "Snapshot umbenannt."}
-
-@router.delete("/api/storage/snapshot/delete")
-def snapshot_delete(data: StorageAction, user=Depends(require_login)):
-    return {"message": "Snapshot gelöscht."}
-
-@router.post("/api/storage/snapshot/rollback")
-def snapshot_rollback(data: StorageAction, user=Depends(require_login)):
-    return {"message": "Rollback erfolgreich."}
-
-@router.post("/api/storage/snapshot/clone")
-def snapshot_clone(data: SnapshotClone, user=Depends(require_login)):
-    return {"message": "Snapshot geklont."}
-
-
-# Storage Disks
-@router.get("/api/storage/disks")
-def storage_disks_all(
-    user=Depends(require_login),
-    server_conn=Depends(get_server_db)
-):
-    servers = server_conn.execute(
-        "SELECT id, name, host, port, username, password, private_key FROM servers"
-    ).fetchall()
-
-    result = []
-    for server in servers:
-        try:
-            with SSHClient(dict(server)) as ssh:
-                cmd = "lsblk -J -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,SERIAL"
-                out = ssh.execute(cmd)
-                data = json.loads(out["stdout"])
-                for disk in data.get("blockdevices", []):
-                    result.append({
-                        "server": server["name"],
-                        "device": disk.get("name", ""),
-                        "size": disk.get("size", ""),
-                        "type": disk.get("type", ""),
-                        "filesystem": disk.get("fstype", ""),
-                        "mountpoint": disk.get("mountpoint", ""),
-                        "model": disk.get("model", ""),
-                        "serial": disk.get("serial", ""),
-                        "status": "online"
-                    })
-        except Exception:
-            continue
-
-    return result
-
-
-@router.get("/api/storage/disks/{server_id}")
-def storage_disks_by_server(
-    server_id: int,
-    user=Depends(require_login),
-    server_conn=Depends(get_server_db)
-):
-    server = server_conn.execute(
-        "SELECT id, name, host, port, username, password, private_key FROM servers WHERE id=?",
-        (server_id,)
-    ).fetchone()
-
-    if not server:
-        raise HTTPException(status_code=404, detail="Server nicht gefunden")
-
-    try:
-        with SSHClient(dict(server)) as ssh:
-            cmd = "lsblk -J -o NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,SERIAL"
-            out = ssh.execute(cmd)
-            data = json.loads(out["stdout"])
-
-        return [
-            {
-                "device": disk.get("name", ""),
-                "size": disk.get("size", ""),
-                "type": disk.get("type", ""),
-                "filesystem": disk.get("fstype", ""),
-                "mountpoint": disk.get("mountpoint", ""),
-                "model": disk.get("model", ""),
-                "serial": disk.get("serial", ""),
-                "status": "online"
-            }
-            for disk in data.get("blockdevices", [])
-        ]
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Fehler beim Abrufen der Festplatten: {exc}")
-
-
-# =====================================================
-# API-ROUTEN – BACKUP
-# =====================================================
-
+# ===== API – BACKUP (unverändert, aber angepasst) =====
 @router.get("/api/backup/list")
-def backup_list(
-    user=Depends(require_login),
-    backup_conn=Depends(get_backup_db),
-    server_conn=Depends(get_server_db)
-):
+def backup_list(user=Depends(require_login), backup_conn=Depends(get_backup_db), server_conn=Depends(get_server_db)):
     backups = backup_conn.execute("SELECT * FROM backups ORDER BY created DESC").fetchall()
-
     result = []
-    for backup in backups:
-        server = server_conn.execute(
-            "SELECT name FROM servers WHERE id = ?",
-            (backup["server_id"],)
-        ).fetchone()
-
+    for b in backups:
+        server = server_conn.execute("SELECT name FROM servers WHERE id=?", (b["server_id"],)).fetchone()
         result.append({
-            "id": backup["id"],
-            "name": backup["name"],
-            "server": server["name"] if server else "Unbekannt",
-            "path": backup["path"],
-            "size": backup["size"] or "-",
-            "status": backup["status"],
-            "date": backup["created"]
+            "id": b["id"], "name": b["name"], "server": server["name"] if server else "Unbekannt",
+            "path": b["path"], "size": b["size"] or "-", "status": b["status"], "date": b["created"]
         })
-
     return result
-
 
 @router.post("/api/backup/create")
-def backup_create(
-    user=Depends(require_login),
-    server_conn=Depends(get_server_db),
-    backup_conn=Depends(get_backup_db)
-):
+def backup_create(user=Depends(require_login), server_conn=Depends(get_server_db), backup_conn=Depends(get_backup_db)):
     servers = server_conn.execute("SELECT * FROM servers").fetchall()
-
     if not servers:
-        raise HTTPException(status_code=400, detail="Keine Server für Backups gefunden.")
-
+        raise HTTPException(400, "Keine Server für Backups gefunden.")
     created = []
     errors = []
-
     for server in servers:
         try:
             backup_name = f"backup_{server['name']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.tar.gz"
             backup_path = f"/tmp/{backup_name}"
-
             with SSHClient(dict(server)) as ssh:
-                result = ssh.execute(
-                    f"sudo tar -czf {backup_path} /etc /var/log /home 2>/dev/null || echo 'Backup created with warnings'"
-                )
-                if result["stderr"] and "Backup created" not in result["stderr"]:
-                    raise Exception(result["stderr"])
-
-                size_result = ssh.execute(f"ls -lh {backup_path} | awk '{{print $5}}'")
-                size = size_result["stdout"].strip() or "unknown"
-
+                ssh.execute(f"sudo tar -czf {backup_path} /etc /var/log /home 2>/dev/null")
+                size = ssh.execute(f"ls -lh {backup_path} | awk '{{print $5}}'")["stdout"].strip()
             backup_conn.execute(
-                "INSERT INTO backups (name, server_id, path, size, status) VALUES (?, ?, ?, ?, ?)",
+                "INSERT INTO backups (name, server_id, path, size, status) VALUES (?,?,?,?,?)",
                 (backup_name, server["id"], backup_path, size, "OK")
             )
             backup_conn.commit()
             created.append(backup_name)
-
             write_log(server["name"], user.username, "INFO", "backup_create", f"Backup {backup_name} erstellt")
-
-        except Exception as exc:
-            errors.append(f"{server['name']}: {str(exc)}")
-            write_log(server["name"], user.username, "ERROR", "backup_create", str(exc))
-
+        except Exception as e:
+            errors.append(f"{server['name']}: {str(e)}")
     if created:
         msg = f"{len(created)} Backups erstellt: {', '.join(created)}"
         if errors:
             msg += f" (Fehler: {', '.join(errors)})"
         return {"message": msg}
-    else:
-        raise HTTPException(status_code=500, detail=f"Keine Backups erstellt: {', '.join(errors)}")
-
+    raise HTTPException(500, f"Keine Backups erstellt: {', '.join(errors)}")
 
 @router.post("/api/backup/restore/{backup_id}")
-def backup_restore(
-    backup_id: int,
-    user=Depends(require_login),
-    backup_conn=Depends(get_backup_db),
-    server_conn=Depends(get_server_db)
-):
+def backup_restore(backup_id: int, user=Depends(require_login), backup_conn=Depends(get_backup_db), server_conn=Depends(get_server_db)):
     backup = backup_conn.execute("SELECT * FROM backups WHERE id=?", (backup_id,)).fetchone()
     if not backup:
-        raise HTTPException(status_code=404, detail="Backup nicht gefunden")
-
+        raise HTTPException(404, "Backup nicht gefunden")
     server = server_conn.execute("SELECT * FROM servers WHERE id=?", (backup["server_id"],)).fetchone()
     if not server:
-        raise HTTPException(status_code=404, detail="Server nicht gefunden")
-
+        raise HTTPException(404, "Server nicht gefunden")
     try:
         with SSHClient(dict(server)) as ssh:
-            check = ssh.execute(f"test -f {backup['path']} && echo 'exists'")
-            if "exists" not in check["stdout"]:
-                raise Exception(f"Backup-Datei {backup['path']} nicht gefunden")
-
-            result = ssh.execute(f"sudo tar -xzf {backup['path']} -C / 2>/dev/null")
-            if result["stderr"]:
-                raise Exception(result["stderr"])
-
+            ssh.execute(f"sudo tar -xzf {backup['path']} -C /")
         write_log(server["name"], user.username, "INFO", "backup_restore", f"Backup {backup['name']} wiederhergestellt")
         return {"message": f"Backup {backup['name']} erfolgreich wiederhergestellt"}
-
-    except Exception as exc:
-        write_log(server["name"], user.username, "ERROR", "backup_restore", str(exc))
-        raise HTTPException(status_code=500, detail=str(exc))
-
+    except Exception as e:
+        write_log(server["name"], user.username, "ERROR", "backup_restore", str(e))
+        raise HTTPException(500, str(e))
 
 @router.delete("/api/backup/delete/{backup_id}")
-def backup_delete(
-    backup_id: int,
-    user=Depends(require_login),
-    backup_conn=Depends(get_backup_db),
-    server_conn=Depends(get_server_db)
-):
+def backup_delete(backup_id: int, user=Depends(require_login), backup_conn=Depends(get_backup_db), server_conn=Depends(get_server_db)):
     backup = backup_conn.execute("SELECT * FROM backups WHERE id=?", (backup_id,)).fetchone()
     if not backup:
-        raise HTTPException(status_code=404, detail="Backup nicht gefunden")
-
-    # Datei löschen (falls vorhanden)
+        raise HTTPException(404, "Backup nicht gefunden")
     server = server_conn.execute("SELECT * FROM servers WHERE id=?", (backup["server_id"],)).fetchone()
     if server:
         try:
             with SSHClient(dict(server)) as ssh:
                 ssh.execute(f"sudo rm -f {backup['path']}")
-        except Exception:
+        except:
             pass
-
     backup_conn.execute("DELETE FROM backups WHERE id=?", (backup_id,))
     backup_conn.commit()
-
     write_log(server["name"] if server else "Unbekannt", user.username, "INFO", "backup_delete", f"Backup {backup['name']} gelöscht")
     return {"message": f"Backup {backup['name']} gelöscht"}
-
-
-# =====================================================
-# API-ROUTEN – LOGS
-# =====================================================
-
-@router.get("/api/logs/list")
-def logs_list(
-    level: str = "all",
-    server: str = "all",
-    user=Depends(require_login),
-    conn=Depends(get_logs_db)
-):
-    query = "SELECT * FROM logs WHERE 1=1"
-    params = []
-
-    if level != "all":
-        query += " AND level = ?"
-        params.append(level)
-
-    if server != "all":
-        query += " AND server = ?"
-        params.append(server)
-
-    query += " ORDER BY timestamp DESC LIMIT 1000"
-
-    rows = conn.execute(query, params).fetchall()
-    return [dict(row) for row in rows]
-
-
-@router.delete("/api/logs/clear")
-def logs_clear(
-    user=Depends(require_login),
-    conn=Depends(get_logs_db)
-):
-    conn.execute("DELETE FROM logs")
-    conn.commit()
-
-    write_log(None, user.username, "INFO", "logs_clear", "Alle Logs wurden gelöscht")
-    return {"message": "Alle Logs gelöscht."}

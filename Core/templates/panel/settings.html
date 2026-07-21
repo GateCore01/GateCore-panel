@@ -10,78 +10,66 @@
     <script src="/js/settings.js" defer></script>
     <script src="/js/auth.js" defer></script>
 </head>
-
 <body>
-
-<div class="sidebar">
-    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
-    <h2>GateCore-Panel</h2>
-    <ul>
-        <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
-        <li><a href="/panel/lxc" data-i18n="sidebar.lxc">LXC</a></li>
-        <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
-        <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
-        <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
-        <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
-        <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
-        <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
-    </ul>
-</div>
-
-<div class="taskbar-oben">
-    <div class="taskbar-oben-left">
-        <h1 data-i18n="settings.title">Einstellungen</h1>
+    <div class="sidebar">
+        <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+        <h2>GateCore-Panel</h2>
+        <ul>
+            <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
+            <li><a href="/panel/docker" data-i18n="sidebar.docker">Docker</a></li>
+            <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
+            <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
+            <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
+            <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
+            <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
+            <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
+        </ul>
     </div>
-    <div class="taskbar-oben-right">
-        <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left">
+            <h1 data-i18n="settings.title">Einstellungen</h1>
+        </div>
+        <div class="taskbar-oben-right">
+            <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        </div>
     </div>
-</div>
-
-<div class="content">
-    <div class="form-card">
-        <h2 data-i18n="settings.browser">Browser-Einstellungen</h2>
-
-        <!-- Darstellung -->
-        <div class="settings-section">
-            <h3 data-i18n="settings.appearance">Darstellung</h3>
-            <div class="form-group">
-                <label for="theme" data-i18n="settings.theme">Design</label>
-                <select id="theme">
-                    <option value="system" data-i18n="settings.system">System</option>
-                    <option value="light" data-i18n="settings.light">Hell</option>
-                    <option value="dark" data-i18n="settings.dark">Dunkel</option>
-                </select>
-                <span class="setting-description" data-i18n="settings.theme_desc">
-                    Wähle das Design für das GateCore-Panel.
-                </span>
+    <div class="content">
+        <div class="form-card">
+            <h2 data-i18n="settings.browser">Browser-Einstellungen</h2>
+            <div class="settings-section">
+                <h3 data-i18n="settings.appearance">Darstellung</h3>
+                <div class="form-group">
+                    <label for="theme" data-i18n="settings.theme">Design</label>
+                    <select id="theme">
+                        <option value="system" data-i18n="settings.system">System</option>
+                        <option value="light" data-i18n="settings.light">Hell</option>
+                        <option value="dark" data-i18n="settings.dark">Dunkel</option>
+                    </select>
+                    <span class="setting-description" data-i18n="settings.theme_desc">Wähle das Design für das GateCore-Panel.</span>
+                </div>
             </div>
-        </div>
-
-        <!-- Sprache – Dropdown wird dynamisch von settings.js befüllt -->
-        <div class="settings-section">
-            <h3 data-i18n="settings.language">Sprache</h3>
-            <div class="form-group">
-                <label for="language" data-i18n="settings.language">Sprache</label>
-                <select id="language">
-                    <!-- Wird von settings.js dynamisch befüllt -->
-                </select>
-                <span class="setting-description" data-i18n="settings.language_desc">
-                    Ändert die Sprache der Benutzeroberfläche.
-                </span>
+            <div class="settings-section">
+                <h3 data-i18n="settings.language">Sprache</h3>
+                <div class="form-group">
+                    <label for="language" data-i18n="settings.language">Sprache</label>
+                    <select id="language"></select>
+                    <span class="setting-description" data-i18n="settings.language_desc">Ändert die Sprache der Benutzeroberfläche.</span>
+                </div>
             </div>
-        </div>
-
-        <!-- Buttons -->
-        <div class="button-row">
-            <button id="saveSettings" data-i18n="button.save">Einstellungen speichern</button>
-            <button id="resetSettings" data-i18n="button.reset">Zurücksetzen</button>
-        </div>
-
-        <div class="save-info" data-i18n="settings.save_info">
-            Änderungen werden nach dem Neuladen der Seite übernommen.
+            <div class="settings-section">
+                <h3 data-i18n="settings.docker">Docker</h3>
+                <div class="form-group">
+                    <label for="dockerRoot" data-i18n="settings.docker_root">Docker‑Root‑Verzeichnis</label>
+                    <input type="text" id="dockerRoot" placeholder="/var/lib/docker">
+                    <span class="setting-description" data-i18n="settings.docker_root_desc">Pfad, unter dem Docker seine Daten speichert.</span>
+                </div>
+            </div>
+            <div class="button-row">
+                <button id="saveSettings" data-i18n="button.save">Einstellungen speichern</button>
+                <button id="resetSettings" data-i18n="button.reset">Zurücksetzen</button>
+            </div>
+            <div class="save-info" data-i18n="settings.save_info">Änderungen werden nach dem Neuladen der Seite übernommen.</div>
         </div>
     </div>
-</div>
-
 </body>
 </html>

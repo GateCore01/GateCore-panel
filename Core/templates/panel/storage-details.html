@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title data-i18n="storage.title">Speicherverwaltung (BTRFS)</title>
+    <title data-i18n="storage.details_title">BTRFS Pool Details</title>
     <link rel="stylesheet" href="/css/panel.css">
     <script src="/js/i18n.js" defer></script>
     <script src="/js/auth.js" defer></script>
-    <script src="/js/storage.js" defer></script>
+    <script src="/js/storage-details.js" defer></script>
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
@@ -27,30 +27,23 @@
     </div>
     <div class="taskbar-oben">
         <div class="taskbar-oben-left">
-            <h1 data-i18n="storage.title">BTRFS Speicherverwaltung</h1>
+            <h1 data-i18n="storage.details_title">BTRFS Pool Details</h1>
         </div>
         <div class="taskbar-oben-right">
-            <button onclick="window.location='/panel/storage/add'" data-i18n="storage.add_pool">Neuer Pool</button>
-            <button onclick="loadStorage()" data-i18n="button.refresh">Aktualisieren</button>
+            <button onclick="window.location='/panel/storage'" data-i18n="button.back">Zurück</button>
             <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
         </div>
     </div>
     <div class="statistiken">
         <div class="table-card">
-            <h2 data-i18n="storage.pools">BTRFS Pools</h2>
-            <table id="poolTable">
-                <thead>
-                    <tr>
-                        <th data-i18n="storage.name">Name</th>
-                        <th data-i18n="storage.raid_level">RAID-Level</th>
-                        <th data-i18n="storage.mountpoint">Mountpoint</th>
-                        <th data-i18n="storage.devices">Geräte</th>
-                        <th data-i18n="storage.created">Erstellt</th>
-                        <th data-i18n="storage.actions">Aktionen</th>
-                    </tr>
-                </thead>
-                <tbody id="poolBody">
-                    <tr><td colspan="6" class="empty-row" data-i18n="storage.no_pools">Keine Pools vorhanden.</td></tr>
+            <h2 data-i18n="storage.general_info">Allgemeine Informationen</h2>
+            <table>
+                <tbody>
+                    <tr><th data-i18n="storage.name">Name</th><td id="poolName">-</td></tr>
+                    <tr><th data-i18n="storage.server">Server</th><td id="serverName">-</td></tr>
+                    <tr><th data-i18n="storage.raid_level">RAID-Level</th><td id="poolRaid">-</td></tr>
+                    <tr><th data-i18n="storage.mountpoint">Mountpoint</th><td id="poolMountpoint">-</td></tr>
+                    <tr><th data-i18n="storage.devices">Geräte</th><td id="poolDevices">-</td></tr>
                 </tbody>
             </table>
         </div>
@@ -60,16 +53,27 @@
             <table id="subvolumeTable">
                 <thead>
                     <tr>
-                        <th data-i18n="storage.id">ID</th>
                         <th data-i18n="storage.name">Name</th>
                         <th data-i18n="storage.path">Pfad</th>
-                        <th data-i18n="storage.pool">Pool</th>
                         <th data-i18n="storage.actions">Aktionen</th>
                     </tr>
                 </thead>
-                <tbody id="subvolumeBody">
-                    <tr><td colspan="5" class="empty-row" data-i18n="storage.no_subvolumes">Keine Subvolumes.</td></tr>
-                </tbody>
+                <tbody id="subvolumeBody"></tbody>
+            </table>
+        </div>
+        <br><br>
+        <div class="table-card">
+            <h2 data-i18n="storage.snapshots">Snapshots</h2>
+            <table id="snapshotTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="storage.name">Name</th>
+                        <th data-i18n="storage.path">Pfad</th>
+                        <th data-i18n="storage.created">Erstellt</th>
+                        <th data-i18n="storage.actions">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="snapshotBody"></tbody>
             </table>
         </div>
     </div>

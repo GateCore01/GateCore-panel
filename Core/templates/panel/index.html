@@ -11,14 +11,12 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-
-    <!-- ===== SIDEBAR ===== -->
     <div class="sidebar">
         <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
         <h2>GateCore-Panel</h2>
         <ul>
             <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
-            <li><a href="/panel/lxc" data-i18n="sidebar.lxc">LXC</a></li>
+            <li><a href="/panel/docker" data-i18n="sidebar.docker">Docker</a></li>
             <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
             <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
             <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
@@ -27,8 +25,6 @@
             <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
         </ul>
     </div>
-
-    <!-- ===== TASKBAR ===== -->
     <div class="taskbar-oben">
         <div class="taskbar-oben-left">
             <h1 data-i18n="sidebar.dashboard">Dashboard</h1>
@@ -37,11 +33,7 @@
             <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
         </div>
     </div>
-
-    <!-- ===== HAUPTBEREICH ===== -->
     <div class="statistiken">
-
-        <!-- HERO-BEREICH -->
         <div class="dashboard-hero">
             <div>
                 <p class="eyebrow" data-i18n="dashboard.eyebrow">GateCore Übersicht</p>
@@ -56,88 +48,65 @@
             </div>
             <div class="dashboard-hero-actions">
                 <button type="button" id="refreshDashboardButton" class="secondary-button" data-i18n="button.refresh">Aktualisieren</button>
-                <a href="/panel/lxc" class="secondary-button" data-i18n="button.open_containers">Container öffnen</a>
+                <a href="/panel/docker" class="secondary-button" data-i18n="button.open_containers">Container öffnen</a>
                 <a href="/panel/servers" class="secondary-button" data-i18n="button.check_servers">Server prüfen</a>
             </div>
         </div>
-
-        <!-- STATISTIK-KARTEN -->
         <div class="dashboard-grid">
-            <a class="dashboard-card" href="/panel/lxc">
-                <h2 data-i18n="dashboard.lxc">LXC Container</h2>
-                <span id="lxc-count">0</span>
-                <p class="dashboard-meta" id="lxc-status-meta" data-i18n="dashboard.containers_active">0 aktiv</p>
+            <a class="dashboard-card" href="/panel/docker">
+                <h2 data-i18n="dashboard.docker">Docker Container</h2>
+                <span id="container-count">0</span>
+                <p class="dashboard-meta" id="container-status-meta" data-i18n="dashboard.containers_active">0 aktiv</p>
             </a>
-
             <a class="dashboard-card" href="/panel/servers">
                 <h2 data-i18n="dashboard.servers">Server</h2>
                 <span id="server-count">0</span>
                 <p class="dashboard-meta" data-i18n="dashboard.connected">verbunden</p>
             </a>
-
             <a class="dashboard-card" href="/panel/users">
                 <h2 data-i18n="dashboard.users">Benutzer</h2>
                 <span id="users-count">0</span>
                 <p class="dashboard-meta" data-i18n="dashboard.registered">registriert</p>
             </a>
-
             <a class="dashboard-card" href="/panel/storage">
                 <h2 data-i18n="dashboard.storage">Speicher-Pools</h2>
                 <span id="storage-count">0</span>
                 <p class="dashboard-meta" data-i18n="dashboard.managed">in der Verwaltung</p>
             </a>
-
-            <a class="dashboard-card" href="/panel/lxc">
+            <a class="dashboard-card" href="/panel/docker">
                 <h2 data-i18n="dashboard.cpu">CPU</h2>
                 <span id="cpu-usage">0%</span>
                 <p class="dashboard-meta" data-i18n="dashboard.avg">Durchschnitt</p>
             </a>
-
-            <a class="dashboard-card" href="/panel/lxc">
+            <a class="dashboard-card" href="/panel/docker">
                 <h2 data-i18n="dashboard.ram">RAM</h2>
                 <span id="ram-usage">0%</span>
                 <p class="dashboard-meta" data-i18n="dashboard.avg">Durchschnitt</p>
             </a>
         </div>
-
-        <!-- DETAIL-PANELS -->
         <div class="dashboard-panel-grid">
-
-            <!-- Container-Status -->
             <section class="panel-card">
                 <div class="panel-card-header">
                     <h3 data-i18n="dashboard.container_status">Container-Status</h3>
                     <span class="panel-tag" id="updated-time" data-i18n="dashboard.updated">Aktualisiert</span>
                 </div>
-                <div id="lxc-status-list" class="status-list">
-                    <!-- dynamisch befüllt -->
-                </div>
+                <div id="container-status-list" class="status-list"></div>
             </section>
-
-            <!-- Serverübersicht -->
             <section class="panel-card">
                 <div class="panel-card-header">
                     <h3 data-i18n="dashboard.server_overview">Serverübersicht</h3>
                     <span class="panel-tag" data-i18n="dashboard.live">Live</span>
                 </div>
-                <div id="server-list" class="mini-list">
-                    <!-- dynamisch befüllt -->
-                </div>
+                <div id="server-list" class="mini-list"></div>
             </section>
-
-            <!-- Speicher-Pools -->
             <section class="panel-card">
                 <div class="panel-card-header">
                     <h3 data-i18n="dashboard.storage_overview">Speicher-Pools</h3>
                     <span class="panel-tag" data-i18n="dashboard.available">Verfügbar</span>
                 </div>
-                <div id="storage-list" class="mini-list">
-                    <!-- dynamisch befüllt -->
-                </div>
+                <div id="storage-list" class="mini-list"></div>
             </section>
-
         </div>
     </div>
-
 </body>
 </html>

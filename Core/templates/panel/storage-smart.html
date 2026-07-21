@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="storage.smart_title">SMART Informationen</title>
+    <link rel="stylesheet" href="/css/panel.css">
+    <script src="/js/i18n.js" defer></script>
+    <script src="/js/auth.js" defer></script>
+    <script src="/js/storage-smart.js" defer></script>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="sidebar">...</div>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left"><h1 data-i18n="storage.smart_title">SMART</h1></div>
+        <div class="taskbar-oben-right">
+            <button onclick="window.location='/panel/storage'" data-i18n="button.back">Zurück</button>
+            <button onclick="loadSMART()" data-i18n="button.refresh">Aktualisieren</button>
+            <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        </div>
+    </div>
+    <div class="statistiken">
+        <div class="table-card">
+            <h2 data-i18n="storage.disk_info">Festplatteninformationen</h2>
+            <table>
+                <tbody>
+                    <tr><th data-i18n="storage.device">Gerät</th><td id="deviceName">-</td></tr>
+                    <tr><th data-i18n="storage.model">Modell</th><td id="deviceModel">-</td></tr>
+                    <tr><th data-i18n="storage.serial">Seriennummer</th><td id="serialNumber">-</td></tr>
+                </tbody>
+            </table>
+        </div>
+        <br><br>
+        <div class="table-card">
+            <h2 data-i18n="storage.smart_attributes">SMART Attribute</h2>
+            <table id="smartTable">
+                <thead>
+                    <tr><th>ID</th><th data-i18n="storage.name">Name</th><th data-i18n="storage.current">Aktuell</th><th data-i18n="storage.worst">Schlechtester</th><th data-i18n="storage.threshold">Grenzwert</th><th data-i18n="storage.raw_value">Rohwert</th></tr>
+                </thead>
+                <tbody id="smartBody"></tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>

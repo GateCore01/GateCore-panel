@@ -11,64 +11,60 @@
     <link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
-
-<div class="sidebar">
-    <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
-    <h2>GateCore-Panel</h2>
-    <ul>
-        <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
-        <li><a href="/panel/lxc" data-i18n="sidebar.lxc">LXC</a></li>
-        <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
-        <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
-        <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
-        <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
-        <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
-        <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
-    </ul>
-</div>
-
-<div class="taskbar-oben">
-    <div class="taskbar-oben-left">
-        <h1 data-i18n="logs.title">System-Logs</h1>
+    <div class="sidebar">
+        <img src="/svg/gati.svg" alt="GateCore Logo" class="header-svg-gati">
+        <h2>GateCore-Panel</h2>
+        <ul>
+            <li><a href="/panel" data-i18n="sidebar.dashboard">Dashboard</a></li>
+            <li><a href="/panel/docker" data-i18n="sidebar.docker">Docker</a></li>
+            <li><a href="/panel/servers" data-i18n="sidebar.servers">Server</a></li>
+            <li><a href="/panel/users" data-i18n="sidebar.users">Benutzer</a></li>
+            <li><a href="/panel/logs" data-i18n="sidebar.logs">Logs</a></li>
+            <li><a href="/panel/backup" data-i18n="sidebar.backup">Backup</a></li>
+            <li><a href="/panel/storage" data-i18n="sidebar.storage">Speicher</a></li>
+            <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
+        </ul>
     </div>
-    <div class="taskbar-oben-right">
-        <button id="refreshButton" data-i18n="button.refresh">Aktualisieren</button>
-        <button id="clearButton" data-i18n="logs.clear">Logs löschen</button>
-        <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
-    </div>
-</div>
-
-<div class="statistiken">
-    <div class="table-card">
-        <div class="table-header">
-            <h2 data-i18n="logs.protocols">Protokolle</h2>
-            <div class="filter-row">
-                <select id="serverFilter">
-                    <option value="all" data-i18n="logs.all_servers">Alle Server</option>
-                </select>
-                <select id="logLevel">
-                    <option value="all" data-i18n="logs.all_levels">Alle Level</option>
-                    <option value="INFO">INFO</option>
-                    <option value="WARNING">WARNING</option>
-                    <option value="ERROR">ERROR</option>
-                </select>
-            </div>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left">
+            <h1 data-i18n="logs.title">System-Logs</h1>
         </div>
-        <table id="logsTable">
-            <thead>
-                <tr>
-                    <th data-i18n="logs.time">Zeit</th>
-                    <th data-i18n="logs.server">Server</th>
-                    <th data-i18n="logs.level">Level</th>
-                    <th data-i18n="logs.user">Benutzer</th>
-                    <th data-i18n="logs.action">Aktion</th>
-                    <th data-i18n="logs.details">Details</th>
-                </tr>
-            </thead>
-            <tbody id="logsBody"></tbody>
-        </table>
+        <div class="taskbar-oben-right">
+            <button id="refreshButton" data-i18n="button.refresh">Aktualisieren</button>
+            <button id="clearButton" data-i18n="logs.clear">Logs löschen</button>
+            <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        </div>
     </div>
-</div>
-
+    <div class="statistiken">
+        <div class="table-card">
+            <div class="table-header">
+                <h2 data-i18n="logs.protocols">Protokolle</h2>
+                <div class="filter-row">
+                    <select id="serverFilter">
+                        <option value="all" data-i18n="logs.all_servers">Alle Server</option>
+                    </select>
+                    <select id="logLevel">
+                        <option value="all" data-i18n="logs.all_levels">Alle Level</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                    </select>
+                </div>
+            </div>
+            <table id="logsTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="logs.time">Zeit</th>
+                        <th data-i18n="logs.server">Server</th>
+                        <th data-i18n="logs.level">Level</th>
+                        <th data-i18n="logs.user">Benutzer</th>
+                        <th data-i18n="logs.action">Aktion</th>
+                        <th data-i18n="logs.details">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="logsBody"></tbody>
+            </table>
+        </div>
+    </div>
 </body>
 </html>

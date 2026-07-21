@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title data-i18n="storage.snapshots_title">BTRFS Snapshots</title>
+    <link rel="stylesheet" href="/css/panel.css">
+    <script src="/js/i18n.js" defer></script>
+    <script src="/js/auth.js" defer></script>
+    <script src="/js/storage-snapshots.js" defer></script>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+</head>
+<body>
+    <div class="sidebar">...</div>
+    <div class="taskbar-oben">
+        <div class="taskbar-oben-left"><h1 data-i18n="storage.snapshots_title">BTRFS Snapshotverwaltung</h1></div>
+        <div class="taskbar-oben-right">
+            <button onclick="window.location='/panel/storage'" data-i18n="button.back">Zurück</button>
+            <button onclick="loadSnapshots()" data-i18n="button.refresh">Aktualisieren</button>
+            <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
+        </div>
+    </div>
+    <div class="statistiken">
+        <div class="form-card">
+            <h2 data-i18n="storage.create_snapshot">Neuen Snapshot erstellen</h2>
+            <form id="snapshotForm">
+                <div class="form-group">
+                    <label data-i18n="storage.pool">Pool</label>
+                    <select id="pool" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="storage.subvolume">Subvolume</label>
+                    <select id="subvolume" required></select>
+                </div>
+                <div class="form-group">
+                    <label data-i18n="storage.snapshot_name">Snapshotname</label>
+                    <input type="text" id="snapshotName" required>
+                </div>
+                <div class="button-row">
+                    <button type="submit" data-i18n="storage.create_snapshot">Snapshot erstellen</button>
+                </div>
+            </form>
+            <div id="status"></div>
+        </div>
+        <br><br>
+        <div class="table-card">
+            <h2 data-i18n="storage.existing_snapshots">Vorhandene Snapshots</h2>
+            <table id="snapshotTable">
+                <thead>
+                    <tr>
+                        <th data-i18n="storage.name">Name</th>
+                        <th data-i18n="storage.path">Pfad</th>
+                        <th data-i18n="storage.created">Erstellt</th>
+                        <th data-i18n="storage.actions">Aktionen</th>
+                    </tr>
+                </thead>
+                <tbody id="snapshotBody"></tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
