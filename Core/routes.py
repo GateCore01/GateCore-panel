@@ -541,3 +541,10 @@ def backup_delete(backup_id: int, user=Depends(require_login), backup_conn=Depen
     backup_conn.commit()
     write_log(server["name"] if server else "Unbekannt", user.username, "INFO", "backup_delete", f"Backup {backup['name']} gelöscht")
     return {"message": f"Backup {backup['name']} gelöscht"}
+
+@router.get("/api/docker/container/{container_id}")
+def docker_container_details(container_id: int, user=Depends(require_login), conn=Depends(get_docker_db)):
+    container = conn.execute("SELECT * FROM docker_containers WHERE id=?", (container_id,)).fetchone()
+    if not container:
+        raise HTTPException(404, "Container nicht gefunden")
+    return dict(container)

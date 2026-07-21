@@ -29,6 +29,7 @@ async function loadContainers() {
                         <button class="btn-restart" onclick="containerAction('restart', ${c.id})" data-i18n="docker.restart">Neustart</button>
                         <button class="btn-delete" onclick="containerAction('delete', ${c.id})" data-i18n="docker.delete">Löschen</button>
                         <button class="btn-logs" onclick="viewLogs(${c.id})" data-i18n="docker.logs">Logs</button>
+                        <button class="btn-shell" onclick="openShell(${c.id})" data-i18n="docker.shell">Shell</button>
                     </div>
                 </td>
             </tr>`;
@@ -70,6 +71,11 @@ async function viewLogs(id) {
     } catch (err) {
         alert('Fehler beim Laden der Logs: ' + err.message);
     }
+}
+
+// docker.js – Ergänzung für Shell
+function openShell(id) {
+    window.location = `/panel/docker/shell?id=${id}`;
 }
 
 document.addEventListener('DOMContentLoaded', loadContainers);

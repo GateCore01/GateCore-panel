@@ -923,3 +923,83 @@ body.dark-theme dialog button:hover {
     background: #fff3cd;
     color: #856404;
 }
+
+/* ======================================================
+   Docker Shell – Terminal & Status-Indikatoren
+   ====================================================== */
+
+/* Status-Indikator für Verbindungsstatus */
+.status-indicator {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+.status-online  { background: #4caf50; }
+.status-offline { background: #f44336; }
+.status-connecting { background: #ff9800; animation: pulse 1s infinite; }
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.3; }
+    100% { opacity: 1; }
+}
+
+/* Terminal-Container – für die Docker-Shell-Seite */
+#terminal-container {
+    width: 100%;
+    height: 70vh;
+    background: #1e1e2e;
+    border-radius: 8px;
+    overflow: hidden;
+    padding: 10px;
+    box-sizing: border-box;
+}
+
+/* Terminal-Toolbar */
+.terminal-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+.terminal-toolbar h2 {
+    color: #1e3c72;
+    margin: 0;
+    font-size: 1.2rem;
+}
+
+/* Connection-Status in der Taskbar */
+.connection-status {
+    display: flex;
+    align-items: center;
+    margin-right: 15px;
+}
+.connection-status .status-text {
+    font-weight: 500;
+}
+
+/* Shell-Button in der Container-Liste */
+.btn-shell {
+    background: #6f42c1;
+    color: white;
+}
+.btn-shell:hover {
+    opacity: 0.9;
+    transform: translateY(-2px);
+}
+
+/* Dunkles Theme – Anpassungen für Terminal */
+body.dark-theme #terminal-container {
+    background: #0d0d1a;
+}
+body.dark-theme .terminal-toolbar h2 {
+    color: #e0e0e0;
+}
+
+.btn-shell { background: #6f42c1; }
+.btn-shell:hover { opacity: 0.9; }

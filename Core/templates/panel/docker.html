@@ -25,6 +25,7 @@
             <li><a href="/panel/settings" data-i18n="sidebar.settings">Einstellungen</a></li>
         </ul>
     </div>
+
     <div class="taskbar-oben">
         <div class="taskbar-oben-left">
             <h1 data-i18n="docker.title">Docker Container</h1>
@@ -34,6 +35,7 @@
             <button id="logoutButton" data-i18n="button.logout">Abmelden</button>
         </div>
     </div>
+
     <div class="statistiken">
         <div class="table-card">
             <h2 data-i18n="docker.containers">Container</h2>
@@ -54,5 +56,9 @@
             </table>
         </div>
     </div>
+
+    <!-- Der Shell-Button wird über JavaScript dynamisch hinzugefügt,
+         aber wir brauchen ihn auch im statischen HTML (wird von JS generiert).
+         Deshalb bleibt alles im Skript. -->
 </body>
 </html>
