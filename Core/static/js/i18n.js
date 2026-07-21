@@ -8,6 +8,45 @@ const i18n = {
     queue: []
 };
 
+// Alle unterstützten Sprachen für das Dropdown
+window.LANGUAGES = {
+    'de': 'Deutsch',
+    'en': 'English',
+    'es': 'Español',
+    'fr': 'Français',
+    'it': 'Italiano',
+    'ru': 'Русский',
+    'ja': '日本語',
+    'zh-CN': '简体中文',
+    'zh-TW': '繁體中文',
+    'pt-BR': 'Português (Brasil)',
+    'pt-PT': 'Português (Europeu)',
+    'ko': '한국어',
+    'tr': 'Türkçe',
+    'nl': 'Nederlands',
+    'pl': 'Polski',
+    'sv': 'Svenska',
+    'ar': 'العربية',
+    'cs': 'Čeština',
+    'hu': 'Magyar',
+    'el': 'Ελληνικά',
+    'bg': 'Български',
+    'ro': 'Română',
+    'hr': 'Hrvatski',
+    'sk': 'Slovenčina',
+    'uk': 'Українська',
+    'da': 'Dansk',
+    'fi': 'Suomi',
+    'no': 'Norsk',
+    'id': 'Bahasa Indonesia',
+    'ms': 'Bahasa Melayu',
+    'th': 'ภาษาไทย',
+    'vi': 'Tiếng Việt',
+    'tl': 'Tagalog',
+    'he': 'עברית',
+    'ca': 'Català'
+};
+
 // Cookie-Hilfen (global)
 window.getCookie = function(name) {
     const value = `; ${document.cookie}`;
@@ -26,12 +65,27 @@ function getLanguage() {
     let lang = window.getCookie('gatecore_language');
     if (!lang) {
         const browserLang = navigator.language || navigator.languages[0];
-        if (browserLang.startsWith('de')) lang = 'de';
-        else if (browserLang.startsWith('es')) lang = 'es';
-        else if (browserLang.startsWith('fr')) lang = 'fr';
-        else if (browserLang.startsWith('it')) lang = 'it';
-        else if (browserLang.startsWith('ru')) lang = 'ru';
-        else lang = 'en';
+        
+        // Präfix-Mapping für alle Sprachen
+        const langMap = {
+            'de': 'de', 'en': 'en', 'es': 'es', 'fr': 'fr', 'it': 'it', 'ru': 'ru',
+            'ja': 'ja', 'ko': 'ko', 'tr': 'tr', 'nl': 'nl', 'pl': 'pl', 'sv': 'sv',
+            'ar': 'ar', 'cs': 'cs', 'hu': 'hu', 'el': 'el', 'bg': 'bg', 'ro': 'ro',
+            'hr': 'hr', 'sk': 'sk', 'uk': 'uk', 'da': 'da', 'fi': 'fi', 'no': 'no',
+            'id': 'id', 'ms': 'ms', 'th': 'th', 'vi': 'vi', 'tl': 'tl', 'he': 'he',
+            'ca': 'ca'
+        };
+        
+        // Spezialfälle mit Region
+        if (browserLang.startsWith('zh-CN')) lang = 'zh-CN';
+        else if (browserLang.startsWith('zh-TW')) lang = 'zh-TW';
+        else if (browserLang.startsWith('pt-BR')) lang = 'pt-BR';
+        else if (browserLang.startsWith('pt-PT')) lang = 'pt-PT';
+        else {
+            const prefix = browserLang.split('-')[0];
+            lang = langMap[prefix] || 'en';
+        }
+        
         window.setCookie('gatecore_language', lang);
     }
     return lang;
@@ -54,7 +108,6 @@ window.setLanguage = function(lang) {
 async function loadLanguage(lang) {
     if (i18n.translations[lang]) return i18n.translations[lang];
     try {
-        // Korrekter Pfad: /i18n/datei.json (nicht /i18n/)
         const response = await fetch(`/i18n/${lang}.json`);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const data = await response.json();

@@ -1,21 +1,37 @@
 // settings.js – Einstellungen speichern & Theme anwenden
 document.addEventListener("DOMContentLoaded", function() {
-    const theme = window.getCookie('gatecore_theme') || 'system';
-    const language = window.getCookie('gatecore_language') || 'en';
-    const animations = window.getCookie('gatecore_animations') || 'true';
-    const sidebarState = window.getCookie('gatecore_sidebar') || 'expanded';
-
     const themeSelect = document.getElementById('theme');
     const langSelect = document.getElementById('language');
     const animSelect = document.getElementById('animations');
     const sidebarSelect = document.getElementById('sidebar');
+
+    // ---- Sprach-Dropdown dynamisch befüllen ----
+    if (langSelect && window.LANGUAGES) {
+        const currentLang = window.getCookie('gatecore_language') || 'en';
+        langSelect.innerHTML = '';
+        for (const [code, name] of Object.entries(window.LANGUAGES)) {
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = name;
+            if (code === currentLang) {
+                option.selected = true;
+            }
+            langSelect.appendChild(option);
+        }
+    }
+
+    // ---- Gespeicherte Werte laden ----
+    const theme = window.getCookie('gatecore_theme') || 'system';
+    const language = window.getCookie('gatecore_language') || 'en';
+    const animations = window.getCookie('gatecore_animations') || 'true';
+    const sidebarState = window.getCookie('gatecore_sidebar') || 'expanded';
 
     if (themeSelect) themeSelect.value = theme;
     if (langSelect) langSelect.value = language;
     if (animSelect) animSelect.value = animations;
     if (sidebarSelect) sidebarSelect.value = sidebarState;
 
-    // Speichern
+    // ---- Speichern ----
     document.getElementById('saveSettings')?.addEventListener('click', function(e) {
         e.preventDefault();
         const newTheme = themeSelect ? themeSelect.value : 'system';
@@ -30,27 +46,53 @@ document.addEventListener("DOMContentLoaded", function() {
 
         applyTheme(newTheme);
         if (window.setLanguage) window.setLanguage(newLanguage);
+        
+        // Animationen global steuern
+        if (newAnimations === 'false') {
+            document.body.classList.add('no-animations');
+        } else {
+            document.body.classList.remove('no-animations');
+        }
+
+        // Sidebar-Status
+        const sidebar = document.querySelector('.sidebar');
+        if (sidebar) {
+            if (newSidebar === 'collapsed') {
+                sidebar.classList.add('collapsed');
+            } else {
+                sidebar.classList.remove('collapsed');
+            }
+        }
+
         alert('Settings saved!');
     });
 
-    // Zurücksetzen
+    // ---- Zurücksetzen ----
     document.getElementById('resetSettings')?.addEventListener('click', function(e) {
         e.preventDefault();
         if (themeSelect) themeSelect.value = 'system';
-        if (langSelect) langSelect.value = 'en';
+        if (langSelect) {
+            // Standardmäßig Englisch
+            for (const opt of langSelect.options) {
+                if (opt.value === 'en') {
+                    opt.selected = true;
+                    break;
+                }
+            }
+        }
         if (animSelect) animSelect.value = 'true';
         if (sidebarSelect) sidebarSelect.value = 'expanded';
     });
 
-    // Theme anwenden
+    // ---- Theme anwenden ----
     applyTheme(theme);
 
-    // Animationen global steuern
+    // ---- Animationen global ----
     if (animations === 'false') {
         document.body.classList.add('no-animations');
     }
 
-    // Sidebar-Status anwenden
+    // ---- Sidebar-Status ----
     if (sidebarState === 'collapsed') {
         document.querySelector('.sidebar')?.classList.add('collapsed');
     }

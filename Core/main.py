@@ -63,7 +63,7 @@ from ssh.system import hostname
 app = FastAPI(
     title="GateCore",
     description="GateCore Linux Server Management",
-    version="0.1.0"
+    version="0.0.3"
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -73,9 +73,7 @@ BASE_DIR = Path(__file__).resolve().parent
 # -------------------------------------------------
 
 # Template Repo
-TEMPLATE_REPO = (
-    "https://git.code.sf.net/p/gatecore-template/container-templates"
-)
+TEMPLATE_REPO = "git://git.code.sf.net/p/gatecore-template/gatecore-template gatecore-template-gatecore-template"
 
 # Template Path
 TEMPLATE_PATH = BASE_DIR / "cache" / "templates"
