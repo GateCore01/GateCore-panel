@@ -7,6 +7,9 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 from typing import Generator
+import glob
+import os.path
+import shutil
 
 BASE_DIR = Path(__file__).resolve().parent
 DATABASE_DIR = BASE_DIR / "database"
@@ -18,6 +21,17 @@ DOCKER_DB = DATABASE_DIR / "docker.db"
 LOGS_DB = DATABASE_DIR / "logs.db"
 STORAGE_DB = DATABASE_DIR / "storage.db"
 BACKUP_DB = DATABASE_DIR / "backup.db"
+
+DATABASE_SRC_DIR = BASE_DIR / "database-source"
+DATABASE_SRC_DIR.mkdir(exist_ok=True)
+
+for file in glob.glob(os.path.join(DATABASE_SRC_DIR, "*")):
+    if file not in glob.glob(os.path.join(DATABASE_DIR, "*")):
+        shutil.copy(file,DATABASE_DIR)
+    else:
+        print("{} exists in {}".format(
+            file,os.path.join(os.path.split(DATABASE_DIR)[-2:])
+        ))
 
 def _connect_with_wal(db_path: Path) -> sqlite3.Connection:
     conn = sqlite3.connect(db_path)
