@@ -2,6 +2,11 @@ name: Build and Push GateCore Panel
 
 on:
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version gemäß Semantic Versioning (SemVer) (z.B. v1.0.0)"
+        required: true
+        type: string
 
 jobs:
   build:
@@ -42,4 +47,6 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:latest
+          tags: |
+            ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:latest
+            ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:${{ github.event.inputs.version }}
