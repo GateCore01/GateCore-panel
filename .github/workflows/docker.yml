@@ -4,9 +4,23 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version gemäß Semantic Versioning (SemVer) (z.B. v1.0.0)"
+        description: "Basis-Version (z.B. 1.0.0)"
         required: true
         type: string
+      channel:
+        description: "Release-Typ"
+        required: true
+        type: choice
+        options:
+          - Release
+          - Alpha
+          - Beta
+          - Release Candidate
+      prerelease_number:
+        description: "Vorabversionsnummer (z.B. 1)"
+        required: false
+        default: -1
+        type: number
 
 jobs:
   build:
@@ -16,6 +30,24 @@ jobs:
       packages: write
 
     steps:
+      - name: Create version tag
+        id: version
+        run: |
+          TAG="v${{ github.event.inputs.version }}"
+
+          if [ "${{ github.event.inputs.channel }}" = "Alpha" ]; then
+            TAG="$TAG-alpha"
+          elif [ "${{ github.event.inputs.channel }}" = "Beta" ]; then
+            TAG="$TAG-beta"
+          elif [ "${{ github.event.inputs.channel }}" = "Release Candidate" ]; then
+            TAG="$TAG-rc"
+          fi
+
+          if [ "${{ github.event.inputs.channel }}" != "Release" ] && [ ${{ github.event.inputs.prerelease_number }} >= 0 ]; then
+            TAG="$TAG.${{ github.event.inputs.prerelease_number }}"
+          fi
+
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -49,4 +81,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           tags: |
             ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:latest
-            ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:${{ github.event.inputs.version }}
+            ghcr.io/${{ steps.vars.outputs.owner_lc }}/gatecore-panel:${{ steps.version.outputs.tag }}
