@@ -15,6 +15,8 @@ RUN /opt/gatecore/panel/venv/bin/pip install websockets fastapi uvicorn jinja2 p
 RUN addgroup -S gatecore && adduser -S gatecore -G gatecore
 RUN chown -R gatecore:gatecore /opt/gatecore/panel/
 
+EXPOSE 80
+
 USER gatecore
 WORKDIR /opt/gatecore/panel
 ENTRYPOINT ["/opt/gatecore/panel/venv/bin/python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
